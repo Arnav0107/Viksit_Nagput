@@ -6,6 +6,7 @@ interface Contractor {
   name: string;
   type: string;
   total_claims_inr: number;
+  fraud_flags_confirmed?: number;
 }
 
 interface ContractorDetailProps {
@@ -81,7 +82,7 @@ export const ContractorDetail: React.FC<ContractorDetailProps> = ({ contractors,
 
       {/* Contractor Metrics Cards Grid */}
       {activeContractor && (
-        <div className="grid grid-cols-1 md:grid-cols-3 border border-dossier-border divide-y md:divide-y-0 md:divide-x divide-dossier-border bg-dossier-card">
+        <div className="grid grid-cols-1 md:grid-cols-4 border border-dossier-border divide-y md:divide-y-0 md:divide-x divide-dossier-border bg-dossier-card">
           <div className="p-4 flex flex-col justify-between h-24">
             <span className="font-mono text-[10px] uppercase text-dossier-muted tracking-wider font-bold">Corporate Entity</span>
             <h2 className="font-serif text-base font-extrabold text-dossier-text uppercase truncate">
@@ -100,6 +101,13 @@ export const ContractorDetail: React.FC<ContractorDetailProps> = ({ contractors,
             <span className="font-mono text-[10px] uppercase text-dossier-muted tracking-wider font-bold">Daily Target Benchmark</span>
             <h2 className="font-mono text-lg font-black text-dossier-text">
               {benchmark} MT / day
+            </h2>
+          </div>
+
+          <div className="p-4 flex flex-col justify-between h-24">
+            <span className="font-mono text-[10px] uppercase text-dossier-muted tracking-wider font-bold">Confirmed Violations</span>
+            <h2 className={`font-mono text-lg font-black ${(activeContractor.fraud_flags_confirmed || 0) > 0 ? 'text-status-flagged' : 'text-status-verified'}`}>
+              {activeContractor.fraud_flags_confirmed || 0} Cases Ruled
             </h2>
           </div>
         </div>

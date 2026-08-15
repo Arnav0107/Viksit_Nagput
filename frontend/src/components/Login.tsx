@@ -1,18 +1,101 @@
-import React from 'react';
-import { Shield, ShieldAlert, Users, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Shield, ShieldAlert, Users, AlertTriangle, KeyRound, UserCheck, Loader2 } from 'lucide-react';
 
 interface LoginProps {
-  onLogin: (role: string) => void;
+  onLogin: (role: string, token: string, username: string) => void;
+  initialError?: string | null;
 }
 
-export const Login: React.FC<LoginProps> = ({ onLogin }) => {
+const DEMO_PRESETS = [
+  {
+    role: 'auditor',
+    title: 'NMC Lead Auditor',
+    subtitle: 'Cryptographic signing & on-chain sealing (Full RBAC)',
+    username: 'auditor_nmc',
+    password: 'auditor123',
+    icon: Shield,
+    badgeColor: 'border-status-flagged text-status-flagged bg-status-flagged/10',
+  },
+  {
+    role: 'officer',
+    title: 'Ward Zone Officer',
+    subtitle: 'Citizen complaints & SLA review access',
+    username: 'officer_ward7',
+    password: 'officer123',
+    icon: ShieldAlert,
+    badgeColor: 'border-status-review text-status-review bg-status-review/10',
+  },
+  {
+    role: 'public',
+    title: 'Public Transparency',
+    subtitle: 'Read-only transaction ledger & complaint filing',
+    username: 'citizen_nagpur',
+    password: 'public123',
+    icon: Users,
+    badgeColor: 'border-status-verified text-status-verified bg-status-verified/10',
+  },
+];
+
+export const Login: React.FC<LoginProps> = ({ onLogin, initialError }) => {
+  const [username, setUsername] = useState<string>('auditor_nmc');
+  const [password, setPassword] = useState<string>('auditor123');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(initialError || null);
+
+  const executeLogin = async (loginUser: string, loginPass: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: loginUser, password: loginPass }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Authentication failed. Please verify credentials.');
+      }
+
+      // Store token securely in sessionStorage (not localStorage)
+      sessionStorage.setItem('auditchain_token', data.access_token);
+      sessionStorage.setItem('auditchain_role', data.role);
+      sessionStorage.setItem('auditchain_user', data.username);
+
+      onLogin(data.role, data.access_token, data.username);
+    } catch (err: any) {
+      setError(err.message || 'Unable to connect to authentication server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePresetSelect = (preset: typeof DEMO_PRESETS[0]) => {
+    setUsername(preset.username);
+    setPassword(preset.password);
+    executeLogin(preset.username, preset.password);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username.trim() || !password.trim()) {
+      setError('Please enter both username and password.');
+      return;
+    }
+    executeLogin(username, password);
+  };
+
   return (
     <div className="min-h-[85vh] flex items-center justify-center p-4">
-      <div className="max-w-md w-full border border-dossier-border bg-dossier-card p-8 rounded-none relative">
+      <div className="max-w-lg w-full border border-dossier-border bg-dossier-card p-8 rounded-none relative shadow-sm">
         
         {/* Dossier stamp overlay design */}
-        <div className="absolute top-0 right-0 w-20 h-20 border-b border-l border-dossier-border p-2 flex justify-center items-center select-none pointer-events-none">
-          <span className="font-mono text-[8px] text-dossier-muted font-bold uppercase rotate-12 tracking-tighter">NMC•SECURE</span>
+        <div className="absolute top-0 right-0 w-24 h-24 border-b border-l border-dossier-border p-2 flex flex-col justify-center items-center select-none pointer-events-none">
+          <span className="font-mono text-[8px] text-dossier-muted font-bold uppercase tracking-tighter">SECURE•AUTH</span>
+          <span className="font-mono text-[7px] text-status-verified font-bold uppercase tracking-widest mt-0.5">JWT • HS256</span>
         </div>
 
         <div className="text-center pb-6 border-b border-dashed border-dossier-border mb-6">
@@ -21,67 +104,130 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <p className="text-[10px] text-dossier-muted font-mono mt-1.5 uppercase font-bold">Civic-Tech Municipal Contract Auditing Portal</p>
         </div>
 
-        <div className="space-y-3.5">
+        {/* Error Notification */}
+        {error && (
+          <div className="mb-6 p-3 border border-status-flagged bg-status-flagged/10 text-status-flagged text-xs font-mono flex items-start gap-2">
+            <AlertTriangle size={15} className="shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold uppercase block">Authentication Error</span>
+              <span className="text-[11px] opacity-90">{error}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Quick-Select Demo Roles */}
+        <div className="space-y-2.5 mb-6">
           <div className="text-center font-mono text-[10px] text-dossier-muted uppercase font-bold tracking-wider mb-2">
-            Select Credential Profile for Verification
+            Quick-Select Demo Role (1-Click Demo)
           </div>
 
-          {/* Role selection buttons */}
-          <button
-            onClick={() => onLogin('auditor')}
-            className="w-full border border-dossier-border p-4 bg-dossier-bg hover:border-dossier-text transition-all text-left flex gap-4 items-center group cursor-pointer"
-          >
-            <div className="p-2 border border-dossier-border bg-dossier-card text-dossier-text">
-              <Shield size={20} />
-            </div>
-            <div>
-              <h3 className="font-serif font-black text-sm uppercase text-dossier-text flex items-center gap-1.5">
-                NMC Lead Auditor
-              </h3>
-              <p className="text-[9px] text-dossier-muted font-mono uppercase mt-0.5 font-bold">Cryptographic signing & on-chain sealing</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => onLogin('officer')}
-            className="w-full border border-dossier-border p-4 bg-dossier-bg hover:border-dossier-text transition-all text-left flex gap-4 items-center group cursor-pointer"
-          >
-            <div className="p-2 border border-dossier-border bg-dossier-card text-status-review">
-              <ShieldAlert size={20} />
-            </div>
-            <div>
-              <h3 className="font-serif font-black text-sm uppercase text-dossier-text">
-                Ward Zone Officer
-              </h3>
-              <p className="text-[9px] text-dossier-muted font-mono uppercase mt-0.5 font-bold">Citizen complaints & SLA review access</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => onLogin('public')}
-            className="w-full border border-dossier-border p-4 bg-dossier-bg hover:border-dossier-text transition-all text-left flex gap-4 items-center group cursor-pointer"
-          >
-            <div className="p-2 border border-dossier-border bg-dossier-card text-status-verified">
-              <Users size={20} />
-            </div>
-            <div>
-              <h3 className="font-serif font-black text-sm uppercase text-dossier-text">
-                Public Transparency
-              </h3>
-              <p className="text-[9px] text-dossier-muted font-mono uppercase mt-0.5 font-bold">Read-only transaction ledger & complaint filing</p>
-            </div>
-          </button>
+          <div className="grid grid-cols-1 gap-2">
+            {DEMO_PRESETS.map((preset) => {
+              const Icon = preset.icon;
+              const isSelected = username === preset.username;
+              return (
+                <button
+                  key={preset.role}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => handlePresetSelect(preset)}
+                  className={`w-full border p-3 bg-dossier-bg transition-all text-left flex gap-3 items-center group cursor-pointer ${
+                    isSelected ? 'border-dossier-text ring-1 ring-dossier-text' : 'border-dossier-border hover:border-dossier-text'
+                  } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <div className={`p-2 border shrink-0 ${preset.badgeColor}`}>
+                    <Icon size={16} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-serif font-black text-xs uppercase text-dossier-text">
+                        {preset.title}
+                      </h3>
+                      <span className="font-mono text-[8px] uppercase tracking-wider text-dossier-muted px-1 border border-dossier-border bg-dossier-card">
+                        {preset.username}
+                      </span>
+                    </div>
+                    <p className="text-[9px] text-dossier-muted font-mono uppercase truncate mt-0.5">
+                      {preset.subtitle}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="mt-8 font-mono text-[9px] text-dossier-muted text-center leading-relaxed font-bold">
-          <div className="flex justify-center items-center gap-1 text-status-flagged font-bold uppercase mb-1">
-            <AlertTriangle size={11} />
-            <span>NMC AUDIT STANDARDS ENFORCED</span>
+        {/* Manual Credentials Form */}
+        <form onSubmit={handleSubmit} className="border-t border-dashed border-dossier-border pt-5 space-y-4">
+          <div className="font-mono text-[10px] text-dossier-muted uppercase font-bold tracking-wider">
+            Or Sign In With Custom Credentials
           </div>
-          Cryptographic ledgers locked via mock Solc RPC interface. Live wallets automatically sign transactions if detected.
+
+          <div className="space-y-3 font-mono text-xs">
+            <div>
+              <label className="block text-[9px] uppercase font-bold text-dossier-muted mb-1">
+                Username
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="e.g. auditor_nmc"
+                  required
+                  disabled={loading}
+                  className="w-full bg-dossier-bg border border-dossier-border px-3 py-2 text-dossier-text focus:outline-none focus:border-dossier-text font-mono text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[9px] uppercase font-bold text-dossier-muted mb-1">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  disabled={loading}
+                  className="w-full bg-dossier-bg border border-dossier-border px-3 py-2 text-dossier-text focus:outline-none focus:border-dossier-text font-mono text-xs"
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-dossier-text text-dossier-bg py-2.5 font-mono text-xs uppercase font-bold tracking-wider hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                <span>Verifying Credentials & Generating JWT...</span>
+              </>
+            ) : (
+              <>
+                <KeyRound size={14} />
+                <span>Authenticate & Issue Token</span>
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="mt-6 font-mono text-[9px] text-dossier-muted text-center leading-relaxed">
+          <div className="flex justify-center items-center gap-1 text-status-flagged font-bold uppercase mb-1">
+            <UserCheck size={11} />
+            <span>NMC RBAC ENFORCEMENT</span>
+          </div>
+          Server validates signed JWT bearer headers on all mutating blockchain & administrative endpoints.
         </div>
 
       </div>
     </div>
   );
 };
+

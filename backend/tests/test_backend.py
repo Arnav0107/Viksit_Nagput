@@ -117,5 +117,42 @@ class TestAuditChainBackend(unittest.TestCase):
         diff2 = calculate_benchmarks(8500.0, "antony-waste")
         self.assertEqual(diff2, -15.0)
 
+    def test_gate_verification_mismatch_flagging(self):
+        # Case D: GPS claims passed_dumping_ground=True, but NO DumpingGroundGateLog exists
+        log_id = "WB-TEST-004"
+        truck_id = "MH-31-AA-9999"
+        timestamp = datetime.utcnow()
+
+        weigh_log = WeighbridgeLog(
+            id=log_id,
+            truck_id=truck_id,
+            contractor_id="antony-waste",
+            timestamp=timestamp,
+            weight_kg=10000.0,
+            driver_name="Test Driver D",
+            status="under_review"
+        )
+        self.db.add(weigh_log)
+
+        gps_trip = GPSTrip(
+            id="TRIP-TEST-004",
+            truck_id=truck_id,
+            start_time=timestamp - timedelta(hours=2),
+            end_time=timestamp,
+            passed_dumping_ground=True,  # GPS claims true
+            weighbridge_log_id=log_id
+        )
+        self.db.add(gps_trip)
+        self.db.commit()
+
+        # Run detector without adding a DumpingGroundGateLog
+        run_anomaly_detection(self.db)
+
+        # Reload and check
+        updated_log = self.db.query(WeighbridgeLog).filter(WeighbridgeLog.id == log_id).first()
+        self.assertEqual(updated_log.status, "flagged")
+        self.assertIn("Gate Verification Mismatch", updated_log.flag_reason)
+
 if __name__ == "__main__":
     unittest.main()
+

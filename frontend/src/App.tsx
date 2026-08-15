@@ -6,7 +6,7 @@ import { RoadRepairs } from './components/RoadRepairs';
 import { PublicTransparency } from './components/PublicTransparency';
 import { Login } from './components/Login';
 import { Web3Console } from './components/Web3Console';
-import { 
+import {
   Building, BookOpen, FileSpreadsheet, ShieldAlert,
   User, Sun, Moon, LogOut, Layers
 } from 'lucide-react';
@@ -19,7 +19,11 @@ interface ConsoleLog {
 }
 
 function App() {
-  const [role, setRole] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(() => sessionStorage.getItem('auditchain_token'));
+  const [role, setRole] = useState<string | null>(() => sessionStorage.getItem('auditchain_role'));
+  const [username, setUsername] = useState<string | null>(() => sessionStorage.getItem('auditchain_user'));
+  const [authError, setAuthError] = useState<string | null>(null);
+
   const [currentView, setCurrentView] = useState<string>('overview');
   const [selectedFlagCaseId, setSelectedFlagCaseId] = useState<string | null>(null);
   const [overviewData, setOverviewData] = useState<any>(null);
@@ -44,12 +48,6 @@ function App() {
   const fetchDossierData = async () => {
     setLoading(true);
     try {
-      const overviewRes = await fetch('/api/overview');
-      if (overviewRes.status === 404 || overviewRes.status === 500) {
-        // Run seed fallback
-        await fetch('/api/admin/reseed', { method: 'POST' });
-      }
-      
       const updatedOverviewRes = await fetch('/api/overview');
       const oData = await updatedOverviewRes.json();
       setOverviewData(oData);
@@ -59,18 +57,6 @@ function App() {
       setContractors(cData);
     } catch (err) {
       console.error("Error loading API stats", err);
-      try {
-        await fetch('/api/admin/reseed', { method: 'POST' });
-        const retryOverview = await fetch('/api/overview');
-        const retryData = await retryOverview.json();
-        setOverviewData(retryData);
-        
-        const retryContractors = await fetch('/api/contractors');
-        const retryCData = await retryContractors.json();
-        setContractors(retryCData);
-      } catch (nestedErr) {
-        console.error("Fallback seed failed", nestedErr);
-      }
     } finally {
       setLoading(false);
     }
@@ -90,9 +76,12 @@ function App() {
     }
   }, [theme]);
 
-  const handleLogin = (selectedRole: string) => {
+  const handleLogin = (selectedRole: string, authToken: string, authUser: string) => {
     setRole(selectedRole);
-    pushWeb3Log("Authorization", `Logged in under credential profile: [${selectedRole.toUpperCase()}]`, "success");
+    setToken(authToken);
+    setUsername(authUser);
+    setAuthError(null);
+    pushWeb3Log("Authorization", `Logged in under profile: [${selectedRole.toUpperCase()}] (${authUser}) with valid JWT`, "success");
     if (selectedRole === 'public') {
       setCurrentView('transparency');
     } else {
@@ -100,9 +89,24 @@ function App() {
     }
   };
 
-  const handleLogout = () => {
-    pushWeb3Log("Authorization", `Session terminated for profile: [${role?.toUpperCase()}]`, "warn");
+  const handleLogout = (logoutMessage?: string) => {
+    sessionStorage.removeItem('auditchain_token');
+    sessionStorage.removeItem('auditchain_role');
+    sessionStorage.removeItem('auditchain_user');
     setRole(null);
+    setToken(null);
+    setUsername(null);
+    if (logoutMessage) {
+      setAuthError(logoutMessage);
+      pushWeb3Log("Auth Security", `Session terminated: ${logoutMessage}`, "warn");
+    } else {
+      setAuthError(null);
+      pushWeb3Log("Authorization", `Session terminated for profile: [${role?.toUpperCase()}]`, "warn");
+    }
+  };
+
+  const handleAuthError = (errMessage: string) => {
+    handleLogout(errMessage);
   };
 
   const navigateToView = (view: string, targetId?: string) => {
@@ -120,7 +124,19 @@ function App() {
   const handleTriggerReseed = async () => {
     pushWeb3Log("Admin Command", "Received re-seed instruction. Restoring SQLite parameters to baseline...", "warn");
     try {
-      const res = await fetch('/api/admin/reseed', { method: 'POST' });
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch('/api/admin/reseed', { method: 'POST', headers });
+
+      if (res.status === 401 || res.status === 403) {
+        const errData = await res.json().catch(() => ({}));
+        handleAuthError(errData.detail || 'Unauthorized (401/403). Only Lead Auditors can reset the database.');
+        return;
+      }
+
       const data = await res.json();
       if (data.status === 'success') {
         pushWeb3Log("Admin Command", "EVM and Local DB reset complete. Seeded 120 weigh tickets, 2 high-severity contract alerts, 3 Amrut repairs.", "success");
@@ -131,18 +147,18 @@ function App() {
     }
   };
 
-  if (!role) {
+  if (!role || !token) {
     return (
       <div className="bg-dossier-bg min-h-screen text-dossier-text">
         <div className="absolute top-4 right-4 flex gap-2 z-50">
-          <button 
+          <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             className="p-2 border border-dossier-border bg-dossier-card text-gray-500 hover:text-dossier-text cursor-pointer rounded-sm"
           >
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         </div>
-        <Login onLogin={handleLogin} />
+        <Login onLogin={handleLogin} initialError={authError} />
         <div className="h-10"></div>
       </div>
     );
@@ -150,7 +166,7 @@ function App() {
 
   return (
     <div className="min-h-screen pb-36 transition-colors duration-150 bg-dossier-bg text-dossier-text">
-      
+
       {/* Platform Header */}
       <header className="border-b border-dossier-border bg-dossier-card sticky top-0 z-30 font-mono text-xs">
         <div className="max-w-[1600px] mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -178,11 +194,12 @@ function App() {
               <User size={14} className="text-dossier-muted" />
               <span className="font-bold uppercase text-[9px]">
                 CREDENTIAL: <span className={role === 'auditor' ? 'text-status-flagged' : role === 'officer' ? 'text-status-review' : 'text-status-verified'}>{role}</span>
+                {username && <span className="text-dossier-muted font-normal ml-1">({username})</span>}
               </span>
             </div>
 
             {/* Theme Toggle */}
-            <button 
+            <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="p-1.5 border border-dossier-border bg-dossier-card hover:bg-dossier-text/5 cursor-pointer"
             >
@@ -191,7 +208,7 @@ function App() {
 
             {/* Logout */}
             <button
-              onClick={handleLogout}
+              onClick={() => handleLogout()}
               className="p-1.5 border border-status-flagged text-status-flagged hover:bg-status-flagged/5 cursor-pointer font-bold uppercase text-[9px]"
               title="Logout Session"
             >
@@ -204,22 +221,21 @@ function App() {
       {/* Main Layout Area */}
       <div className="max-w-[1600px] mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
+
           {/* Sidebar Index (Print Report Index Look) */}
           <aside className="lg:col-span-3 font-mono text-xs space-y-4">
             <div className="border border-dossier-border p-4 bg-dossier-card">
               <span className="text-[9px] text-dossier-muted block tracking-wider uppercase mb-3 font-bold">Document Sections</span>
               <nav className="space-y-1">
-                
+
                 {role !== 'public' && (
                   <>
                     <button
                       onClick={() => navigateToView('overview')}
-                      className={`w-full flex items-center justify-between px-3 py-2 border font-bold uppercase transition-colors text-left cursor-pointer ${
-                        currentView === 'overview' 
-                          ? 'bg-dossier-text text-dossier-bg border-dossier-text' 
+                      className={`w-full flex items-center justify-between px-3 py-2 border font-bold uppercase transition-colors text-left cursor-pointer ${currentView === 'overview'
+                          ? 'bg-dossier-text text-dossier-bg border-dossier-text'
                           : 'border-transparent hover:bg-dossier-text/5 text-dossier-text'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-2">
                         <Layers size={13} />
@@ -229,11 +245,10 @@ function App() {
 
                     <button
                       onClick={() => navigateToView('contractors')}
-                      className={`w-full flex items-center justify-between px-3 py-2 border font-bold uppercase transition-colors text-left cursor-pointer ${
-                        currentView === 'contractors' 
-                          ? 'bg-dossier-text text-dossier-bg border-dossier-text' 
+                      className={`w-full flex items-center justify-between px-3 py-2 border font-bold uppercase transition-colors text-left cursor-pointer ${currentView === 'contractors'
+                          ? 'bg-dossier-text text-dossier-bg border-dossier-text'
                           : 'border-transparent hover:bg-dossier-text/5 text-dossier-text'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-2">
                         <Building size={13} />
@@ -243,11 +258,10 @@ function App() {
 
                     <button
                       onClick={() => navigateToView('flags')}
-                      className={`w-full flex items-center justify-between px-3 py-2 border font-bold uppercase transition-colors text-left cursor-pointer ${
-                        currentView === 'flags' 
-                          ? 'bg-dossier-text text-dossier-bg border-dossier-text' 
+                      className={`w-full flex items-center justify-between px-3 py-2 border font-bold uppercase transition-colors text-left cursor-pointer ${currentView === 'flags'
+                          ? 'bg-dossier-text text-dossier-bg border-dossier-text'
                           : 'border-transparent hover:bg-dossier-text/5 text-dossier-text'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-2">
                         <ShieldAlert size={13} className={currentView === 'flags' ? '' : 'text-status-flagged'} />
@@ -264,11 +278,10 @@ function App() {
 
                 <button
                   onClick={() => navigateToView('repairs')}
-                  className={`w-full flex items-center gap-2 px-3 py-2 border font-bold uppercase transition-colors text-left cursor-pointer ${
-                    currentView === 'repairs' 
-                      ? 'bg-dossier-text text-dossier-bg border-dossier-text' 
+                  className={`w-full flex items-center gap-2 px-3 py-2 border font-bold uppercase transition-colors text-left cursor-pointer ${currentView === 'repairs'
+                      ? 'bg-dossier-text text-dossier-bg border-dossier-text'
                       : 'border-transparent hover:bg-dossier-text/5 text-dossier-text'
-                  }`}
+                    }`}
                 >
                   <FileSpreadsheet size={13} />
                   <span>{role === 'public' ? '1. Road SLA Tracker' : '4. Road SLA Tracker'}</span>
@@ -276,11 +289,10 @@ function App() {
 
                 <button
                   onClick={() => navigateToView('transparency')}
-                  className={`w-full flex items-center gap-2 px-3 py-2 border font-bold uppercase transition-colors text-left cursor-pointer ${
-                    currentView === 'transparency' 
-                      ? 'bg-dossier-text text-dossier-bg border-dossier-text' 
+                  className={`w-full flex items-center gap-2 px-3 py-2 border font-bold uppercase transition-colors text-left cursor-pointer ${currentView === 'transparency'
+                      ? 'bg-dossier-text text-dossier-bg border-dossier-text'
                       : 'border-transparent hover:bg-dossier-text/5 text-dossier-text'
-                  }`}
+                    }`}
                 >
                   <BookOpen size={13} />
                   <span>{role === 'public' ? '2. Public Ledger' : '5. Public Ledger'}</span>
@@ -299,36 +311,40 @@ function App() {
           {/* Core Content Viewer */}
           <main className="lg:col-span-9">
             {currentView === 'overview' && (
-              <Overview 
-                data={overviewData} 
-                loading={loading} 
-                onNavigate={navigateToView} 
+              <Overview
+                data={overviewData}
+                loading={loading}
+                onNavigate={navigateToView}
               />
             )}
-            
+
             {currentView === 'contractors' && (
-              <ContractorDetail 
-                contractors={contractors} 
-                onNavigate={navigateToView} 
+              <ContractorDetail
+                contractors={contractors}
+                onNavigate={navigateToView}
               />
             )}
 
             {currentView === 'flags' && (
-              <FlaggedCases 
-                initialCaseId={selectedFlagCaseId} 
-                role={role} 
+              <FlaggedCases
+                initialCaseId={selectedFlagCaseId}
+                role={role}
+                token={token}
+                onAuthError={handleAuthError}
               />
             )}
 
             {currentView === 'repairs' && (
-              <RoadRepairs 
-                role={role} 
+              <RoadRepairs
+                role={role}
+                token={token}
+                onAuthError={handleAuthError}
               />
             )}
 
             {currentView === 'transparency' && (
-              <PublicTransparency 
-                data={overviewData} 
+              <PublicTransparency
+                data={overviewData}
               />
             )}
           </main>
@@ -337,9 +353,9 @@ function App() {
       </div>
 
       {/* Cryptographic Node console feed */}
-      <Web3Console 
-        logs={consoleLogs} 
-        onClear={() => setConsoleLogs([])} 
+      <Web3Console
+        logs={consoleLogs}
+        onClear={() => setConsoleLogs([])}
       />
     </div>
   );

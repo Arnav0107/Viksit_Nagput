@@ -1,13 +1,29 @@
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import pandas as pd
-from typing import List, Optional
+from typing import List, Optional, Set
 import uuid
+import hashlib
+from pydantic import BaseModel
 
-from app.db import init_db, get_db, Contractor, WeighbridgeLog, GPSLog, GPSTrip, RoadRepair
+from app.db import init_db, get_db, Contractor, WeighbridgeLog, GPSLog, GPSTrip, RoadRepair, Vehicle, DumpingGroundGateLog
 from app.anomaly import run_anomaly_detection
+from app import blockchain
+from app.auth import (
+    DEMO_CREDENTIALS,
+    DEMO_ACCOUNTS_METADATA,
+    verify_password,
+    create_access_token,
+    require_role,
+    get_current_user,
+    oauth2_scheme,
+    SECRET_KEY,
+    ALGORITHM,
+    jwt,
+    JWTError
+)
 
 app = FastAPI(title="AuditChain Nagpur API", description="Civic-tech audit and anomaly checker for NMC")
 
@@ -20,21 +36,63 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# On startup, initialize tables
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class RoadComplaintRequest(BaseModel):
+    description: str
+
+# In-memory storage for anti-spam complaint fingerprints (hash of ID + client identifier)
+COMPLAINT_FINGERPRINTS: Set[str] = set()
+
+# On startup, initialize tables and print demo credentials to console
 @app.on_event("startup")
 def startup_event():
     init_db()
+    print("\n" + "=" * 68)
+    print(" [NMC] AuditChain Nagpur - Demo Login Credentials (RBAC Enabled)")
+    print("=" * 68)
+    for cred in DEMO_ACCOUNTS_METADATA:
+        print(f" [{cred['role'].upper():<7}] Username: {cred['username']:<16} Password: {cred['password']:<12} ({cred['display_name']})")
+    print("=" * 68 + "\n")
+
+@app.post("/api/auth/login")
+def login_endpoint(payload: LoginRequest):
+    """Authenticates credentials against the demo user store and returns a JWT."""
+    user = DEMO_CREDENTIALS.get(payload.username)
+    if not user or not verify_password(payload.password, user["hashed_password"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+    
+    token = create_access_token(username=user["username"], role=user["role"])
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "role": user["role"],
+        "username": user["username"],
+        "display_name": user.get("display_name", user["username"])
+    }
 
 @app.post("/api/admin/reseed")
-def reseed_database(db: Session = Depends(get_db)):
-    """Reseeds the database to standard starting state for demo purposes."""
+def reseed_database(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("auditor"))
+):
+    """Reseeds the database to standard starting state for demo purposes (Auditor only)."""
     from app.seed import seed_data
     seed_data(db)
     return {"status": "success", "message": "Database successfully reseeded."}
 
 @app.post("/api/admin/run-analytics")
-def trigger_anomaly_detection(db: Session = Depends(get_db)):
-    """Triggers ML and statistical anomaly detection over all logs."""
+def trigger_anomaly_detection(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("auditor"))
+):
+    """Triggers ML and statistical anomaly detection over all logs (Auditor only)."""
     run_anomaly_detection(db)
     return {"status": "success", "message": "Anomaly detection pipeline executed successfully."}
 
@@ -56,7 +114,8 @@ def get_city_overview(db: Session = Depends(get_db)):
             "id": c.id,
             "name": c.name,
             "total_tonnage_mt": round(total_weight, 2),
-            "claims_inr": c.total_claims_inr
+            "claims_inr": c.total_claims_inr,
+            "fraud_flags_confirmed": c.fraud_flags_confirmed or 0
         })
         
     # SLA Repairs statistics
@@ -107,7 +166,14 @@ def get_city_overview(db: Session = Depends(get_db)):
 @app.get("/api/contractors")
 def list_contractors(db: Session = Depends(get_db)):
     """Lists all contractors."""
-    return db.query(Contractor).all()
+    contractors = db.query(Contractor).all()
+    return [{
+        "id": c.id,
+        "name": c.name,
+        "type": c.type,
+        "total_claims_inr": c.total_claims_inr,
+        "fraud_flags_confirmed": c.fraud_flags_confirmed or 0
+    } for c in contractors]
 
 @app.get("/api/contractors/{contractor_id}/tonnage")
 def get_contractor_tonnage_history(contractor_id: str, db: Session = Depends(get_db)):
@@ -181,14 +247,19 @@ def list_weighbridge_logs(
             "status": l.status,
             "flag_reason": l.flag_reason,
             "tx_hash": l.tx_hash,
-            "deviation_pct": l.benchmarked_difference_pct
+            "deviation_pct": l.benchmarked_difference_pct,
+            "disposition": l.disposition,
+            "auditor_note": l.auditor_note
         } for l in logs]
     }
 
 @app.get("/api/weighbridge/flags")
-def list_flagged_logs(db: Session = Depends(get_db)):
-    """Returns detailed records of flagged and under review weighbridge anomalies."""
-    logs = db.query(WeighbridgeLog).filter(WeighbridgeLog.status.in_(["flagged", "under_review"])).order_by(WeighbridgeLog.timestamp.desc()).all()
+def list_flagged_logs(all_logs: bool = True, db: Session = Depends(get_db)):
+    """Returns records of weighbridge anomalies and audit logs."""
+    query = db.query(WeighbridgeLog)
+    if not all_logs:
+        query = query.filter(WeighbridgeLog.status.in_(["flagged", "under_review"]))
+    logs = query.order_by(WeighbridgeLog.timestamp.desc()).all()
     return [{
         "id": l.id,
         "truck_id": l.truck_id,
@@ -200,7 +271,9 @@ def list_flagged_logs(db: Session = Depends(get_db)):
         "status": l.status,
         "flag_reason": l.flag_reason,
         "tx_hash": l.tx_hash,
-        "deviation_pct": l.benchmarked_difference_pct
+        "deviation_pct": l.benchmarked_difference_pct,
+        "disposition": l.disposition,
+        "auditor_note": l.auditor_note
     } for l in logs]
 
 @app.get("/api/weighbridge/flags/{id}")
@@ -231,6 +304,24 @@ def get_flagged_case_detail(id: str, db: Session = Depends(get_db)):
             "speed_kmh": c.speed_kmh
         } for c in coords]
         
+    # Check independent physical boom-barrier RFID gate log
+    gate_verified = False
+    gate_log_data = None
+    if gps_trip:
+        tolerance_delta = timedelta(minutes=30.0)
+        gate_entry = db.query(DumpingGroundGateLog).filter(
+            DumpingGroundGateLog.truck_id == log.truck_id,
+            DumpingGroundGateLog.entry_timestamp >= gps_trip.start_time - tolerance_delta,
+            DumpingGroundGateLog.entry_timestamp <= gps_trip.end_time + tolerance_delta
+        ).first()
+        if gate_entry:
+            gate_verified = True
+            gate_log_data = {
+                "id": gate_entry.id,
+                "gate_id": gate_entry.gate_id,
+                "entry_timestamp": gate_entry.entry_timestamp.isoformat()
+            }
+        
     return {
         "log": {
             "id": log.id,
@@ -243,7 +334,9 @@ def get_flagged_case_detail(id: str, db: Session = Depends(get_db)):
             "status": log.status,
             "flag_reason": log.flag_reason,
             "tx_hash": log.tx_hash,
-            "deviation_pct": log.benchmarked_difference_pct
+            "deviation_pct": log.benchmarked_difference_pct,
+            "disposition": log.disposition,
+            "auditor_note": log.auditor_note
         },
         "trip": {
             "id": gps_trip.id if gps_trip else None,
@@ -251,6 +344,11 @@ def get_flagged_case_detail(id: str, db: Session = Depends(get_db)):
             "end_time": gps_trip.end_time.isoformat() if gps_trip else None,
             "route_name": gps_trip.route_name if gps_trip else None,
             "passed_dumping_ground": gps_trip.passed_dumping_ground if gps_trip else False,
+        },
+        "gate_log": {
+            "verified": gate_verified,
+            "details": gate_log_data,
+            "status_label": "PHYSICAL ENTRY CONFIRMED" if gate_verified else "NO MATCHING PHYSICAL GATE ENTRY FOUND"
         },
         "gps_path": gps_coordinates,
         # Bhandewadi dumping ground coordinates for rendering on map
@@ -277,16 +375,81 @@ def list_road_repairs(db: Session = Depends(get_db)):
         "sla_expiry_date": r.sla_expiry_date.isoformat(),
         "status": r.status,
         "complaints_count": r.complaints_count,
-        "tx_hash": r.tx_hash
+        "tx_hash": r.tx_hash,
+        "disposition": r.disposition,
+        "auditor_note": r.auditor_note
     } for r in repairs]
 
 @app.post("/api/road-repairs/{id}/complaint")
-def register_road_complaint(id: str, db: Session = Depends(get_db)):
-    """Registers a citizen complaint on a road repair SLA. Trigger breach if complaints exceed 3."""
+def register_road_complaint(
+    id: str,
+    payload: RoadComplaintRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    token: Optional[str] = Depends(oauth2_scheme)
+):
+    """
+    Registers a validated citizen complaint on a road repair SLA.
+    - Requires non-empty description (min 10 characters).
+    - Restricts 'officer' and 'auditor' roles from filing complaints.
+    - Uses client fingerprinting (IP + User-Agent or logged-in citizen username per case) to prevent spam duplicates.
+    - Triggers contract SLA breach if complaints exceed 3.
+    """
+    # 1. Validate complaint description
+    if not payload or not payload.description or len(payload.description.strip()) < 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Complaint description must be at least 10 characters long."
+        )
+
+    # 2. Check caller role: Public/citizen users and unauthenticated requests are allowed.
+    # Reject specifically if authenticated user has 'officer' or 'auditor' role.
+    username = None
+    if token and token.strip() and token != "null" and token != "undefined":
+        try:
+            token_payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_role = str(token_payload.get("role", "")).lower()
+            username = token_payload.get("sub")
+            if user_role in ["officer", "auditor"]:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Forbidden: Access denied for role '{user_role}'. Citizen complaints cannot be submitted by internal municipal officers or auditors."
+                )
+        except JWTError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired authentication token."
+            )
+
+    # 3. Locate road repair record
     repair = db.query(RoadRepair).filter(RoadRepair.id == id).first()
     if not repair:
-        raise HTTPException(status_code=404, detail="Road repair record not found")
-        
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Road repair record not found")
+
+    # 4. Anti-spam fingerprinting per road repair case
+    client_ip = request.headers.get("x-forwarded-for")
+    if client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+    elif request.client and request.client.host:
+        client_ip = request.client.host
+    else:
+        client_ip = "unknown"
+
+    user_agent = request.headers.get("user-agent", "unknown")
+    source_identifier = username if username else f"{client_ip}:{user_agent}"
+    fingerprint_raw = f"{id}:{source_identifier}"
+    fingerprint = hashlib.sha256(fingerprint_raw.encode("utf-8")).hexdigest()
+
+    if fingerprint in COMPLAINT_FINGERPRINTS:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You have already reported this case."
+        )
+
+    # Register fingerprint
+    COMPLAINT_FINGERPRINTS.add(fingerprint)
+
+    # Increment complaints count and evaluate SLA breach
     repair.complaints_count += 1
     
     # If active and complaints exceed 3, it breaches the SLA terms
@@ -297,47 +460,133 @@ def register_road_complaint(id: str, db: Session = Depends(get_db)):
     return {
         "status": "success",
         "complaints_count": repair.complaints_count,
-        "repair_status": repair.status
+        "repair_status": repair.status,
+        "message": "Citizen complaint successfully registered."
     }
 
 @app.post("/api/blockchain/lock")
-def lock_record_on_chain(payload: dict, db: Session = Depends(get_db)):
+def lock_record_on_chain(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(require_role("auditor"))
+):
     """
-    Simulates writing a cryptographic hash of a record to a smart contract.
-    Updates the record in the DB with the generated mock transaction hash.
-    Accepts: { "type": "weighbridge" | "road", "id": str }
+    Writes an immutable cryptographic ruling to the AuditChain smart contract on the local Ethereum blockchain.
+    Updates the record in the DB with the confirmed ruling, auditor justification note, and real transaction hash (Auditor only).
+    Accepts: { "type": "weighbridge" | "road", "id": str, "disposition"?: "confirmed_fraud" | "cleared", "note"?: str }
     """
     record_type = payload.get("type")
     record_id = payload.get("id")
+    disposition = payload.get("disposition", "cleared")
+    note = (payload.get("note") or "").strip()
     
     if not record_id or not record_type:
-         raise HTTPException(status_code=400, detail="Missing record type or ID")
+        raise HTTPException(status_code=400, detail="Missing record type or ID")
+
+    if disposition not in ["confirmed_fraud", "cleared"]:
+        raise HTTPException(status_code=400, detail="Invalid disposition. Must be either 'confirmed_fraud' or 'cleared'.")
+
+    if disposition == "confirmed_fraud" and not note:
+        raise HTTPException(
+            status_code=400,
+            detail="An auditor justification note is required when ruling a case as a confirmed fraud violation."
+        )
          
-    tx_hash = f"0x{uuid.uuid4().hex[:64]}"
-    
-    if record_type == "weighbridge":
-        log = db.query(WeighbridgeLog).filter(WeighbridgeLog.id == record_id).first()
-        if not log:
-            raise HTTPException(status_code=404, detail="Weighbridge record not found")
-        log.tx_hash = tx_hash
-        # Mark as verified once locked on-chain (auditor action)
-        log.status = "verified"
-        log.flag_reason = "Log cryptographically sealed on-chain by Auditor."
-    elif record_type == "road":
-        repair = db.query(RoadRepair).filter(RoadRepair.id == record_id).first()
-        if not repair:
-            raise HTTPException(status_code=404, detail="Road repair record not found")
-        repair.tx_hash = tx_hash
-        repair.status = "verified"
-    else:
-        raise HTTPException(status_code=400, detail="Invalid record type")
-        
-    db.commit()
-    return {
-        "status": "success",
-        "tx_hash": tx_hash,
-        "message": f"Record {record_id} successfully signed and locked on-chain."
-    }
+    try:
+        if record_type == "weighbridge":
+            log = db.query(WeighbridgeLog).filter(WeighbridgeLog.id == record_id).first()
+            if not log:
+                raise HTTPException(status_code=404, detail="Weighbridge record not found")
+            
+            # Execute real smart contract transaction on blockchain
+            lock_result = blockchain.lock_weighbridge_record(
+                ticket_id=log.id,
+                truck_id=log.truck_id,
+                contractor="Antony Waste" if log.contractor_id == "antony-waste" else "BVG India",
+                weight_kg=log.weight_kg,
+                timestamp=log.timestamp,
+                gps_route_id=log.gps_route_id,
+                disposition=disposition
+            )
+            tx_hash = lock_result["tx_hash"]
+            log.tx_hash = tx_hash
+            log.disposition = disposition
+            log.auditor_note = note if note else None
+
+            # Apply disposition ruling & preserve original fraud finding
+            orig_reason = log.flag_reason or ""
+            if disposition == "confirmed_fraud":
+                log.status = "confirmed_fraud"
+                log.flag_reason = (
+                    f"{orig_reason} | AUDITOR RULING: CONFIRMED VIOLATION - {note}"
+                    if orig_reason else f"AUDITOR RULING: CONFIRMED VIOLATION - {note}"
+                )
+                if log.contractor:
+                    log.contractor.fraud_flags_confirmed = (log.contractor.fraud_flags_confirmed or 0) + 1
+            else:
+                log.status = "cleared"
+                cleared_justification = note if note else "Reviewed and cleared by auditor inspection."
+                log.flag_reason = (
+                    f"{orig_reason} | AUDITOR RULING: REVIEWED, FALSE POSITIVE - {cleared_justification}"
+                    if orig_reason else f"AUDITOR RULING: REVIEWED, FALSE POSITIVE - {cleared_justification}"
+                )
+
+            final_status = log.status
+
+        elif record_type == "road":
+            repair = db.query(RoadRepair).filter(RoadRepair.id == record_id).first()
+            if not repair:
+                raise HTTPException(status_code=404, detail="Road repair record not found")
+            
+            # Execute real smart contract transaction on blockchain
+            lock_result = blockchain.lock_road_repair_record(
+                repair_id=repair.id,
+                contractor=repair.contractor.name if repair.contractor else "Amrut Yojana Road Builders",
+                ward_name=repair.ward_name,
+                location_gps=repair.location_gps,
+                before_photo_url=repair.before_photo_url,
+                after_photo_url=repair.after_photo_url,
+                work_date=repair.work_completed_date,
+                sla_expiry_date=repair.sla_expiry_date,
+                disposition=disposition
+            )
+            tx_hash = lock_result["tx_hash"]
+            repair.tx_hash = tx_hash
+            repair.disposition = disposition
+            repair.auditor_note = note if note else None
+
+            if disposition == "confirmed_fraud":
+                repair.status = "confirmed_fraud"
+                if repair.contractor:
+                    repair.contractor.fraud_flags_confirmed = (repair.contractor.fraud_flags_confirmed or 0) + 1
+            else:
+                repair.status = "cleared"
+
+            final_status = repair.status
+        else:
+            raise HTTPException(status_code=400, detail="Invalid record type")
+            
+        db.commit()
+        return {
+            "status": "success",
+            "tx_hash": tx_hash,
+            "disposition": disposition,
+            "auditor_note": note,
+            "record_status": final_status,
+            "message": f"Record {record_id} successfully signed and locked on-chain as {disposition}."
+        }
+    except blockchain.BlockchainConfigurationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Blockchain service unavailable or unconfigured: {str(e)}"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unexpected error executing blockchain transaction: {str(e)}"
+        )
 
 if __name__ == "__main__":
     import uvicorn
