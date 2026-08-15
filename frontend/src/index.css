@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+
+@import "tailwindcss";
+
+@dark selector;
+
+@theme {
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  
+  --color-dossier-bg: var(--dossier-bg);
+  --color-dossier-card: var(--dossier-card);
+  --color-dossier-border: var(--dossier-border);
+  --color-dossier-text: var(--dossier-text);
+
+  --color-status-flagged: #9e2a2b;
+  --color-status-review: #c97a1b;
+  --color-status-verified: #1b4d3e;
+}
+
+:root {
+  --dossier-bg: #f7f5f0;
+  --dossier-card: #fdfdfc;
+  --dossier-border: #c0beb5;
+  --dossier-text: #1a1a1a;
+}
+
+.dark {
+  --dossier-bg: #121211;
+  --dossier-card: #1b1b1a;
+  --dossier-border: #3a3a38;
+  --dossier-text: #edece6;
+}
+
+/* Base print-editorial style overrides */
+body {
+  font-family: var(--font-sans);
+  background-color: var(--dossier-bg);
+  color: var(--dossier-text);
+  transition: background-color 0.15s, color 0.15s;
+}
+
+/* Grid layout with dot pattern representing paper texture */
+.dossier-grid {
+  background-image: radial-gradient(rgba(42, 42, 42, 0.08) 1.2px, transparent 1.2px);
+  background-size: 20px 20px;
+}
+
+.dark .dossier-grid {
+  background-image: radial-gradient(rgba(237, 236, 230, 0.04) 1.2px, transparent 1.2px);
+}
+
+/* Print rule lines */
+.rule-line {
+  border-top: 1px solid var(--dossier-border);
+}
+
+.rule-line-heavy {
+  border-top: 2px solid var(--dossier-text);
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(42, 42, 42, 0.15);
+  border-radius: 2px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(237, 236, 230, 0.15);
+}
