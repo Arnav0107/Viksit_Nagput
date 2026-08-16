@@ -59,7 +59,7 @@ export const ContractorDetail: React.FC<ContractorDetailProps> = ({ contractors,
       <div className="border-b border-dossier-border pb-4 flex flex-col md:flex-row justify-between items-start md:items-center">
         <div>
           <h1 className="font-serif text-3xl font-black uppercase tracking-tight text-dossier-text">Contractor Performance Audit</h1>
-          <p className="text-xs text-dossier-muted font-mono mt-0.5 uppercase font-bold">EXHIBIT B: MUNICIPAL BILLING & BENCHMARK COMPLIANCE</p>
+          <p className="text-xs text-dossier-muted font-mono mt-0.5 uppercase font-bold">EXHIBIT B: MUNICIPAL BILLING &amp; BENCHMARK COMPLIANCE</p>
         </div>
         
         {/* Contractor Switcher Tabs */}

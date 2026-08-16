@@ -214,12 +214,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onExplorePublic, initialE
             {loading ? (
               <>
                 <Loader2 size={14} className="animate-spin" />
-                <span>Verifying Credentials & Generating JWT...</span>
+                <span>Verifying Credentials &amp; Generating JWT...</span>
               </>
             ) : (
               <>
                 <KeyRound size={14} />
-                <span>Authenticate & Issue Token</span>
+                <span>Authenticate &amp; Issue Token</span>
               </>
             )}
           </button>
@@ -244,12 +244,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onExplorePublic, initialE
             <UserCheck size={11} />
             <span>NMC RBAC ENFORCEMENT</span>
           </div>
-          Server validates signed JWT bearer headers on all mutating blockchain & administrative endpoints.
+          Server validates signed JWT bearer headers on all mutating blockchain &amp; administrative endpoints.
         </div>
 
       </div>
     </div>
   );
 };
-
-

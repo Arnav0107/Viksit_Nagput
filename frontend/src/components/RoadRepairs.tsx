@@ -159,10 +159,10 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
         }));
         setActiveComplaintId(null);
         setComplaintText('');
-        
+
         onPushWeb3Log?.(
-          "Citizen Registry", 
-          `Complaint recorded on ${repairId}. Total: ${data.complaints_count} reports. SLA Status: ${data.repair_status?.toUpperCase()}`, 
+          "Citizen Registry",
+          `Complaint recorded on ${repairId}. Total: ${data.complaints_count} reports. SLA Status: ${data.repair_status?.toUpperCase()}`,
           data.repair_status === 'breached' ? 'warn' : 'info'
         );
 
@@ -231,8 +231,8 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
       const data = await res.json();
       if (data.status === 'success') {
         onPushWeb3Log?.(
-          "Solidity EVM", 
-          `Road Repair ${repairId} locked on-chain. Sealed Tx: ${data.tx_hash}`, 
+          "Solidity EVM",
+          `Road Repair ${repairId} locked on-chain. Sealed Tx: ${data.tx_hash}`,
           "hex"
         );
         fetchRepairs();
@@ -269,20 +269,21 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
       {/* Header */}
       <div className="border-b border-dossier-border pb-4">
         <h1 className="font-serif text-3xl font-black uppercase tracking-tight text-dossier-text">Road-Repair SLA Tracker</h1>
-        <p className="text-xs text-dossier-muted font-mono mt-0.5 uppercase font-bold">EXHIBIT C: AMRUT YOJANA ROAD RESTORATION COMPLIANCE</p>
+        <p className="text-[10px] text-dossier-muted font-mono mt-0.5 uppercase font-bold">EXHIBIT C: AMRUT YOJANA ROAD RESTORATION COMPLIANCE</p>
       </div>
 
-      <div className="bg-status-review/5 border border-status-review/25 p-4 font-mono text-xs text-dossier-text">
-        <span className="text-status-review font-bold uppercase block mb-1">Audit Policy Checklist:</span>
-        <p className="leading-relaxed font-sans text-xs text-dossier-text mt-1.5 font-medium">
-          Amrut Yojana road-repair contractors are required to restore excavated pipeline roads to a level asphalt grade. 
-          AuditChain enforces a 30-day citizen complaint SLA window. 
-          If more than 3 complaints are validated by GPS tags, contract funds are automatically held, and an audit breach is registered on-chain.
+      {/* Policy Notice */}
+      <div className="border border-dossier-border bg-dossier-card p-4 font-mono text-xs text-dossier-text">
+        <span className="text-dossier-muted font-bold uppercase block mb-1">Audit Policy:</span>
+        <p className="leading-relaxed font-sans text-xs font-medium">
+          Amrut Yojana road-repair contractors are required to restore excavated pipeline roads to a level asphalt grade.
+          AuditChain enforces a 30-day citizen complaint SLA window. If more than 3 complaints are validated by GPS tags, 
+          contract funds are automatically held, and an audit breach is registered on-chain.
         </p>
       </div>
 
       {/* Grid of SLA repair cards */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {repairs.map((repair) => {
           const daysLeft = calculateDaysLeft(repair.sla_expiry_date);
           const isBreached = repair.status === 'breached';
@@ -291,55 +292,56 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
           const currentError = complaintErrors[repair.id];
           const currentSuccess = complaintSuccesses[repair.id];
           const hasAlreadyReported = reportedIds.includes(repair.id);
-          
+
           return (
             <div 
-              key={repair.id} 
-              className={`border p-6 bg-dossier-card transition-all flex flex-col justify-between rounded-none ${
-                isBreached 
-                  ? 'border-status-flagged bg-status-flagged/5' 
-                  : isVerified 
-                    ? 'border-status-verified bg-status-verified/5' 
+              key={repair.id}
+              className={`border p-6 bg-dossier-card flex flex-col justify-between transition-all ${
+                isBreached
+                  ? 'border-status-flagged/60 bg-status-flagged/5'
+                  : isVerified
+                    ? 'border-status-verified/50 bg-status-verified/5'
                     : 'border-dossier-border'
               }`}
             >
               <div>
                 {/* Zone and status header */}
-                <div className="flex justify-between items-start pb-3 border-b border-dossier-border mb-4">
+                <div className="flex justify-between items-start pb-4 border-b border-dossier-border mb-4">
                   <div>
                     <span className="font-mono text-[9px] text-dossier-muted block uppercase font-bold">Contract Ref: {repair.id}</span>
-                    <h3 className="font-serif text-lg font-black uppercase text-dossier-text mt-0.5">{repair.ward_name}</h3>
+                    <h3 className="font-serif text-xl font-extrabold uppercase text-dossier-text mt-0.5">{repair.ward_name}</h3>
                   </div>
                   
                   <div>
                     {isBreached && (
-                      <span className="font-mono text-[9px] font-bold border border-status-flagged text-status-flagged px-2 py-0.5 uppercase bg-status-flagged/10">
-                        SLA BREACHED
+                      <span className="font-mono text-[9px] font-bold px-2 py-1 border border-status-flagged text-status-flagged bg-status-flagged/10 uppercase">
+                        SLA BREACH
                       </span>
                     )}
                     {isVerified && (
-                      <span className="font-mono text-[9px] font-bold border border-status-verified text-status-verified px-2 py-0.5 uppercase bg-status-verified/10">
-                        AUDIT APPROVED
+                      <span className="font-mono text-[9px] font-bold px-2 py-1 border border-status-verified text-status-verified bg-status-verified/10 uppercase flex items-center gap-1">
+                        <CheckCircle size={11} />
+                        Audit Approved
                       </span>
                     )}
                     {!isBreached && !isVerified && (
-                      <span className="font-mono text-[9px] font-bold border border-status-review text-status-review px-2 py-0.5 uppercase bg-status-review/10 animate-pulse">
-                        SLA INSPECTION OPEN
+                      <span className="font-mono text-[9px] font-bold px-2 py-1 border border-status-review text-status-review bg-status-review/10 uppercase">
+                        UNDER SLA INSPECTION
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Telemetry info parameters */}
-                <div className="grid grid-cols-2 gap-4 font-mono text-[10px] text-dossier-text mb-6">
+                {/* Telemetry parameters */}
+                <div className="grid grid-cols-2 gap-4 font-mono text-[10px] text-dossier-text mb-4">
                   <div>
                     <span className="text-dossier-muted block uppercase text-[9px] font-bold">Contractor:</span>
-                    <span className="font-bold text-dossier-text">{repair.contractor_name}</span>
+                    <span className="font-bold">{repair.contractor_name}</span>
                   </div>
                   <div>
                     <span className="text-dossier-muted block uppercase text-[9px] font-bold">GIS Location:</span>
-                    <span className="font-bold text-dossier-text flex items-center gap-1">
-                      <MapPin size={10} className="text-status-review" />
+                    <span className="font-bold flex items-center gap-1">
+                      <MapPin size={10} className="text-dossier-muted" />
                       {repair.location_gps}
                     </span>
                   </div>
@@ -358,60 +360,57 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
                   </div>
                   <div>
                     <span className="text-dossier-muted block uppercase text-[9px] font-bold">Citizen Submissions:</span>
-                    <span className={`font-bold ${isBreached ? 'text-status-flagged text-xs' : 'text-dossier-text'}`}>
-                      {repair.complaints_count} Reports Filed
+                    <span className={`font-bold ${isBreached ? 'text-status-flagged' : ''}`}>
+                      {repair.complaints_count} reports filed
                     </span>
                   </div>
                 </div>
 
                 {/* Before/After Photo exhibits */}
-                <div className="grid grid-cols-2 gap-4 my-6">
+                <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="space-y-1.5">
-                    <span className="font-mono text-[9px] text-dossier-muted block uppercase font-bold">EXHIBIT C-1 (EXCAVATION):</span>
-                    <div className="border border-dossier-border h-36 bg-dossier-bg overflow-hidden relative rounded-none">
-                      <img 
-                        src={repair.before_photo_url} 
-                        alt="Excavated road trench" 
-                        className="w-full h-full object-cover grayscale contrast-125 hover:grayscale-0 transition-all duration-150" 
+                    <span className="font-mono text-[9px] text-dossier-muted block uppercase font-bold">Exhibit C-1 (Excavation):</span>
+                    <div className="border border-dossier-border h-36 bg-dossier-bg overflow-hidden relative">
+                      <img
+                        src={repair.before_photo_url}
+                        alt="Excavated road trench"
+                        className="w-full h-full object-cover"
                       />
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <span className="font-mono text-[9px] text-dossier-muted block uppercase font-bold">EXHIBIT C-2 (RESTORATION):</span>
-                    <div className="border border-dossier-border h-36 bg-dossier-bg overflow-hidden relative rounded-none">
-                      <img 
-                        src={repair.after_photo_url} 
-                        alt="Restored asphalt patch" 
-                        className="w-full h-full object-cover grayscale contrast-110 hover:grayscale-0 transition-all duration-150" 
+                    <span className="font-mono text-[9px] text-dossier-muted block uppercase font-bold">Exhibit C-2 (Restoration):</span>
+                    <div className="border border-dossier-border h-36 bg-dossier-bg overflow-hidden relative">
+                      <img
+                        src={repair.after_photo_url}
+                        alt="Restored asphalt patch"
+                        className="w-full h-full object-cover"
                       />
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* On-chain seal detail, feedback notifications and action buttons */}
+              {/* Action Area */}
               <div className="border-t border-dashed border-dossier-border pt-4 space-y-3">
                 {repair.tx_hash && (
-                  <div className="font-mono text-[9px] text-dossier-text flex flex-col gap-0.5 bg-dossier-bg p-2 border border-dossier-border">
-                    <div className="flex items-center gap-1 text-status-verified font-bold uppercase">
-                      <CheckCircle size={10} />
-                      <span>ON-CHAIN SLA SEAL RECORDED:</span>
-                    </div>
-                    <span className="truncate select-all text-dossier-muted font-bold">{repair.tx_hash}</span>
+                  <div className="font-mono text-[9px] text-status-verified flex flex-col gap-0.5 border border-status-verified/30 bg-status-verified/5 p-2 rounded-sm">
+                    <span className="font-bold uppercase">On-Chain SLA Seal Recorded:</span>
+                    <span className="truncate select-all text-dossier-muted">{repair.tx_hash}</span>
                   </div>
                 )}
 
                 {/* Success Notification */}
                 {currentSuccess && (
-                  <div className="font-mono text-[10px] font-bold text-status-verified bg-status-verified/10 border border-status-verified/30 p-2 flex items-center gap-1.5 animate-fadeIn">
+                  <div className="font-mono text-[10px] font-bold text-status-verified bg-status-verified/10 border border-status-verified/30 p-2 flex items-center gap-1.5">
                     <CheckCircle size={12} className="shrink-0" />
                     <span>{currentSuccess}</span>
                   </div>
                 )}
 
-                {/* Standalone Error Notification (when form is not open) */}
+                {/* Standalone Error Notification (show only when form is closed) */}
                 {currentError && !isFormOpen && (
-                  <div className="font-mono text-[10px] font-bold text-status-flagged bg-status-flagged/10 border border-status-flagged/30 p-2 flex items-center gap-1.5 animate-fadeIn">
+                  <div className="font-mono text-[10px] font-bold text-status-flagged bg-status-flagged/10 border border-status-flagged/30 p-2 flex items-center gap-1.5">
                     <AlertTriangle size={12} className="shrink-0" />
                     <span>{currentError}</span>
                   </div>
@@ -421,12 +420,12 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
                 {isFormOpen && (
                   <div className="border border-status-flagged/40 bg-status-flagged/5 p-3 space-y-2.5">
                     <div className="flex justify-between items-center">
-                      <label className="font-mono text-[10px] font-bold uppercase text-status-flagged flex items-center gap-1">
+                      <label className="font-mono text-[10px] font-bold uppercase text-status-flagged flex items-center gap-1.5">
                         <MessageSquare size={11} />
-                        <span>Describe the issue you observed:</span>
+                        <span>Describe the observed issue:</span>
                       </label>
                       <span className={`font-mono text-[9px] font-bold ${complaintText.trim().length >= 10 ? 'text-status-verified' : 'text-dossier-muted'}`}>
-                        {complaintText.trim().length}/10 min chars
+                        {complaintText.trim().length}/10 min
                       </span>
                     </div>
 
@@ -435,13 +434,13 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
                       onChange={(e) => setComplaintText(e.target.value)}
                       placeholder="Describe the defect in detail (e.g. trench left unrepaired, substandard asphalt grade, hazardous rubble/debris)..."
                       rows={3}
-                      className="w-full bg-dossier-bg border border-dossier-border p-2 font-mono text-xs text-dossier-text placeholder:text-dossier-muted focus:border-status-flagged focus:outline-none resize-none"
+                      className="w-full bg-dossier-bg border border-dossier-border px-2 py-2 font-mono text-xs text-dossier-text focus:outline-none focus:border-dossier-text resize-none"
                       disabled={actioningId === repair.id}
                       autoFocus
                     />
 
                     {currentError && (
-                      <div className="font-mono text-[10px] font-bold text-status-flagged bg-status-flagged/10 border border-status-flagged/30 p-1.5 flex items-center gap-1">
+                      <div className="font-mono text-[10px] font-bold text-status-flagged flex items-center gap-1">
                         <AlertTriangle size={11} className="shrink-0" />
                         <span>{currentError}</span>
                       </div>
@@ -452,7 +451,7 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
                         type="button"
                         onClick={() => handleCancelComplaint(repair.id)}
                         disabled={actioningId === repair.id}
-                        className="px-3 py-1.5 border border-dossier-border text-dossier-muted font-mono text-[10px] font-bold uppercase hover:bg-dossier-text/5 cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                        className="px-3 py-1 border border-dossier-border font-mono text-[10px] text-dossier-muted hover:text-dossier-text hover:bg-dossier-text/5 uppercase font-bold cursor-pointer disabled:opacity-50 flex items-center gap-1"
                       >
                         <X size={11} />
                         <span>Cancel</span>
@@ -462,7 +461,7 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
                         type="button"
                         onClick={() => handleFileComplaint(repair.id)}
                         disabled={actioningId === repair.id || complaintText.trim().length < 10}
-                        className="px-3.5 py-1.5 border border-status-flagged bg-status-flagged text-white font-mono text-[10px] font-bold uppercase hover:bg-status-flagged/90 cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                        className="px-3 py-1 border border-status-flagged text-status-flagged font-mono text-[10px] uppercase font-bold hover:bg-status-flagged/10 cursor-pointer disabled:opacity-50 flex items-center gap-1"
                       >
                         <Send size={11} />
                         <span>{actioningId === repair.id ? "Submitting..." : "Submit Complaint"}</span>
@@ -474,19 +473,18 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
                 {/* Primary Action Buttons */}
                 {!isFormOpen && (
                   <div className="flex gap-3">
-                    {/* Citizen Complaint button: Hidden entirely for officer/auditor roles */}
                     {!isRestrictedRole && (
                       <>
                         {hasAlreadyReported ? (
-                          <div className="flex-1 flex items-center justify-center gap-1.5 border border-status-verified/30 bg-status-verified/10 text-status-verified py-2 text-xs font-mono font-bold uppercase select-none cursor-not-allowed">
-                            <ShieldCheck size={13} className="text-status-verified" />
-                            <span>You already reported this case</span>
+                          <div className="flex-1 flex items-center justify-center gap-1.5 border border-status-verified/30 text-status-verified py-2 text-xs font-mono font-bold uppercase select-none cursor-not-allowed bg-status-verified/5">
+                            <ShieldCheck size={13} />
+                            <span>Already Reported</span>
                           </div>
                         ) : (
                           <button
                             onClick={() => handleOpenComplaintForm(repair.id)}
                             disabled={actioningId === repair.id || isVerified}
-                            className="flex-1 flex items-center justify-center gap-1.5 border border-status-flagged text-status-flagged py-2 text-xs font-mono font-bold hover:bg-status-flagged/5 transition-colors uppercase disabled:opacity-50 cursor-pointer"
+                            className="flex-1 flex items-center justify-center gap-1.5 border border-status-flagged text-status-flagged py-2 text-xs font-mono font-bold uppercase hover:bg-status-flagged/10 cursor-pointer disabled:opacity-50"
                           >
                             <MessageSquare size={13} />
                             <span>Submit Complaint</span>
@@ -495,15 +493,14 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
                       </>
                     )}
 
-                    {/* Lead Auditor Seal button: restricted strictly to auditor role */}
                     {role === 'auditor' && !isVerified && (
                       <button
                         onClick={() => handleSealRecord(repair.id)}
                         disabled={actioningId === repair.id}
-                        className="flex-1 flex items-center justify-center gap-1.5 border border-status-verified text-status-verified py-2 text-xs font-mono font-bold hover:bg-status-verified/5 transition-colors uppercase disabled:opacity-50 cursor-pointer"
+                        className="flex-1 flex items-center justify-center gap-1.5 border border-status-verified text-status-verified py-2 text-xs font-mono font-bold uppercase hover:bg-status-verified/10 cursor-pointer disabled:opacity-50"
                       >
                         <Key size={13} />
-                        <span>{actioningId === repair.id ? "Signing..." : "Release Funds / Seal"}</span>
+                        <span>{actioningId === repair.id ? "Signing..." : "Release Funds / Seal EVM"}</span>
                       </button>
                     )}
                   </div>

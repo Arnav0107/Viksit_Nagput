@@ -56,7 +56,7 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate })
       <div className="border-b-2 border-dossier-text pb-6">
         <div className="flex flex-col md:flex-row md:items-baseline md:justify-between">
           <h1 className="font-serif text-3xl font-black tracking-tight uppercase text-dossier-text">
-            NMC Municipal Audit & Verification Log
+            NMC Municipal Audit &amp; Verification Log
           </h1>
           <span className="font-mono text-[10px] text-dossier-muted uppercase mt-1 md:mt-0 font-bold">
             Nagpur Municipal Corporation • Document Ref: NMC-2026-V8
@@ -422,4 +422,3 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate })
     </div>
   );
 };
-

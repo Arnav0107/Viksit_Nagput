@@ -36,7 +36,7 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
         const res = await fetch('/api/weighbridge/flags?all_logs=true');
         const data = await res.json();
         setCases(data);
-        
+
         if (initialCaseId) {
           setSelectedCaseId(initialCaseId);
         } else if (data.length > 0 && !selectedCaseId) {
@@ -155,10 +155,10 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
       if (data.status === 'success') {
         setActiveRuling(null);
         setRulingNote('');
-        
+
         onPushWeb3Log?.(
-          "Solidity EVM", 
-          `Ruling sealed for Ticket ${caseDetail.log.id} [${dispositionType.toUpperCase()}]. Hash: ${data.tx_hash}`, 
+          "Solidity EVM",
+          `Ruling sealed for Ticket ${caseDetail.log.id} [${dispositionType.toUpperCase()}]. Hash: ${data.tx_hash}`,
           "hex"
         );
 
@@ -181,7 +181,7 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
 
   // Derive coordinates from the actual case GPS telemetry
   const dumpYardCoords: [number, number] = [21.1408, 79.1622]; // Bhandewadi MSW facility
-  
+
   const tripRoute: [number, number][] = (caseDetail?.gps_path && caseDetail.gps_path.length > 0)
     ? caseDetail.gps_path.map((p: any) => [p.lat, p.lng] as [number, number])
     : [[21.1517, 79.0734], [21.1408, 79.1622]];
@@ -205,22 +205,22 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
 
   return (
     <div className="space-y-6">
-      {/* Header and selector */}
-      <div className="border-b border-dossier-border pb-4 flex flex-col lg:flex-row lg:items-center justify-between">
+      {/* Header and Selector */}
+      <div className="border-b border-dossier-border pb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="font-serif text-3xl font-black uppercase tracking-tight flex items-center gap-2 text-status-flagged">
+          <h1 className="font-serif text-3xl font-black uppercase tracking-tight text-status-flagged flex items-center gap-2">
             <ShieldAlert size={28} />
-            Exhibit Investigation Board
+            Evidence Exhibit Board
           </h1>
-          <p className="text-xs text-dossier-muted font-mono mt-0.5 uppercase font-bold">NMC FORENSIC CONTRACT AUDIT LOGS</p>
+          <p className="text-[10px] text-dossier-muted font-mono mt-0.5 uppercase font-bold">NMC FORENSIC CONTRACT AUDIT LOGS</p>
         </div>
 
         <div className="mt-4 lg:mt-0 font-mono text-xs flex items-center gap-2">
-          <span className="text-dossier-muted uppercase font-bold text-[10px]">CASE FILE:</span>
-          <select 
-            value={selectedCaseId} 
+          <span className="text-dossier-muted uppercase font-bold text-[9px]">CASE FILE:</span>
+          <select
+            value={selectedCaseId}
             onChange={(e) => setSelectedCaseId(e.target.value)}
-            className="border border-dossier-border bg-dossier-card p-2 font-bold uppercase text-dossier-text cursor-pointer max-w-xs truncate"
+            className="border border-dossier-border bg-dossier-card p-2 font-bold uppercase text-dossier-text cursor-pointer max-w-xs truncate text-[10px]"
           >
             {selectedCaseId && !cases.some(c => c.id === selectedCaseId) && (
               <option value={selectedCaseId}>
@@ -228,14 +228,14 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
               </option>
             )}
             {cases.map((c) => {
-              const statusTag = c.status === 'confirmed_fraud' 
-                ? 'VIOLATION' 
+              const statusTag = c.status === 'confirmed_fraud'
+                ? 'VIOLATION'
                 : c.status === 'cleared'
                   ? 'CLEARED'
-                  : c.status === 'flagged' 
-                    ? 'FLAGGED' 
-                    : c.status === 'under_review' 
-                      ? 'REVIEW' 
+                  : c.status === 'flagged'
+                    ? 'FLAGGED'
+                    : c.status === 'under_review'
+                      ? 'REVIEW'
                       : 'SECURED';
               return (
                 <option key={c.id} value={c.id}>
@@ -254,111 +254,96 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
       ) : (
         caseDetail && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            {/* Left Panel: Printed Docket Slip Mockup */}
-            <div className="lg:col-span-5 space-y-6">
-              <div className="border border-dossier-border p-6 bg-dossier-card relative shadow-sm">
-                
-                {/* Docket Header */}
-                <div className="border-b border-dashed border-dossier-border pb-4 text-center">
+
+            {/* Left Panel: Weighbridge Docket Slip */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="border border-dossier-border p-6 bg-dossier-card relative">
+
+                {/* Dossier Stamp Header */}
+                <div className="border-b border-dashed border-dossier-border pb-4 text-center mb-6">
                   <span className="font-mono text-[9px] text-dossier-muted block tracking-widest font-bold">MUNICIPAL REVENUE AUDIT</span>
-                  <h3 className="font-serif text-lg font-black uppercase mt-1 text-dossier-text">Weigh Ticket Exhibit</h3>
-                  <div className={`inline-block mt-2 px-2 py-0.5 border text-[9px] font-mono font-bold uppercase ${
-                    isConfirmedFraud || isFlagged
-                      ? 'border-status-flagged text-status-flagged bg-status-flagged/5'
-                      : isUnderReview
-                        ? 'border-status-review text-status-review bg-status-review/5'
-                        : 'border-status-verified text-status-verified bg-status-verified/5'
-                  }`}>
-                    Status: {
-                      isConfirmedFraud
-                        ? 'Confirmed Fraud Violation (Sealed)'
-                        : isCleared
-                          ? 'False Positive Cleared (Sealed)'
-                          : isFlagged
-                            ? 'Flagged Anomaly'
-                            : isUnderReview
-                              ? 'ML Outlier Under Review'
-                              : 'Verified & Secured'
-                    }
-                  </div>
+                  <h3 className="font-serif text-xl font-extrabold uppercase tracking-tight mt-1 text-dossier-text">Weigh Ticket Exhibit</h3>
                 </div>
 
                 {/* Docket Parameters */}
-                <div className="mt-6 space-y-3.5 font-mono text-xs text-dossier-text">
+                <div className="space-y-3 font-mono text-xs text-dossier-text">
+                  {[
+                    { label: 'Ticket ID:', value: caseDetail.log.id },
+                    { label: 'Contractor:', value: caseDetail.log.contractor_name },
+                    { label: 'Vehicle ID:', value: caseDetail.log.truck_id },
+                    { label: 'Filing Time:', value: new Date(caseDetail.log.timestamp).toLocaleString() },
+                  ].map((row) => (
+                    <div key={row.label} className="flex justify-between border-b border-dossier-border/30 pb-2">
+                      <span className="text-dossier-muted uppercase text-[9px] font-bold">{row.label}</span>
+                      <span className="font-bold text-right">{row.value}</span>
+                    </div>
+                  ))}
+
                   <div className="flex justify-between border-b border-dossier-border/30 pb-2">
-                    <span className="text-dossier-muted uppercase text-[10px] font-bold">Ticket ID:</span>
-                    <span className="font-bold text-dossier-text">{caseDetail.log.id}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-dossier-border/30 pb-2">
-                    <span className="text-dossier-muted uppercase text-[10px] font-bold">Contractor:</span>
-                    <span className="font-bold text-dossier-text text-right">{caseDetail.log.contractor_name}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-dossier-border/30 pb-2">
-                    <span className="text-dossier-muted uppercase text-[10px] font-bold">Vehicle ID:</span>
-                    <span className="font-bold text-dossier-text">{caseDetail.log.truck_id}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-dossier-border/30 pb-2">
-                    <span className="text-dossier-muted uppercase text-[10px] font-bold">Filing Time:</span>
-                    <span className="font-bold text-dossier-text">{new Date(caseDetail.log.timestamp).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-dossier-border/30 pb-2">
-                    <span className="text-dossier-muted uppercase text-[10px] font-bold">Registered Tonnage:</span>
+                    <span className="text-dossier-muted uppercase text-[9px] font-bold">Registered Tonnage:</span>
                     <span className={`font-bold text-sm ${isConfirmedFraud || isFlagged ? 'text-status-flagged' : isUnderReview ? 'text-status-review' : 'text-status-verified'}`}>
                       {caseDetail.log.weight_kg.toLocaleString()} kg (~{(caseDetail.log.weight_kg/1000).toFixed(2)} MT)
                     </span>
                   </div>
+
                   <div className="flex justify-between border-b border-dossier-border/30 pb-2">
-                    <span className="text-dossier-muted uppercase text-[10px] font-bold">Driver Signature:</span>
-                    <span className="font-bold text-dossier-text">{caseDetail.log.driver_name}</span>
+                    <span className="text-dossier-muted uppercase text-[9px] font-bold">Driver Signature:</span>
+                    <span className="font-bold">{caseDetail.log.driver_name}</span>
                   </div>
-                  <div className="flex justify-between items-center border-b border-dossier-border/30 pb-2">
-                    <span className="text-dossier-muted uppercase text-[10px] font-bold">Rated Capacity Deviation:</span>
-                    <span className={`font-bold ${caseDetail.log.deviation_pct > 10 ? 'text-status-flagged' : 'text-dossier-text'}`}>
+
+                  <div className="flex justify-between border-b border-dossier-border/30 pb-2">
+                    <span className="text-dossier-muted uppercase text-[9px] font-bold">Rated Capacity Deviation:</span>
+                    <span className={`font-bold ${caseDetail.log.deviation_pct > 10 ? 'text-status-flagged' : ''}`}>
                       {caseDetail.log.deviation_pct >= 0 ? '+' : ''}{caseDetail.log.deviation_pct}% vs rated
                     </span>
                   </div>
+
                   <div className="flex flex-col border-b border-dossier-border/30 pb-2 gap-1">
                     <div className="flex justify-between items-center">
-                      <span className="text-dossier-muted uppercase text-[10px] font-bold">Decentralized Ledger Seal:</span>
+                      <span className="text-dossier-muted uppercase text-[9px] font-bold">Decentralized Ledger Seal:</span>
                       {caseDetail.log.tx_hash && (
                         <button
                           type="button"
                           onClick={() => handleCopyTx(caseDetail.log.tx_hash)}
-                          className="text-[9px] font-mono text-status-verified hover:underline font-bold uppercase cursor-pointer"
+                          className="font-mono text-[9px] text-status-verified font-bold uppercase hover:underline cursor-pointer flex items-center gap-0.5"
                         >
-                          {copiedTx ? "Copied!" : "Copy Hash"}
+                          {copiedTx ? (
+                            <>
+                              <Check size={10} />
+                              <span>Copied!</span>
+                            </>
+                          ) : (
+                            <span>Copy Tx Hash</span>
+                          )}
                         </button>
                       )}
                     </div>
-                    <span className="text-[10px] text-dossier-muted font-bold truncate select-all font-mono">
+                    <span className="text-[10px] text-dossier-muted font-bold truncate select-all">
                       {caseDetail.log.tx_hash || 'Unsealed / Pending'}
                     </span>
                   </div>
                 </div>
 
-                {/* Conflict Description / Audit Finding */}
-                <div className={`mt-6 border p-3 rounded-none font-mono text-xs ${
+                {/* Audit Finding */}
+                <div className={`mt-5 p-3 border text-xs font-mono ${
                   isConfirmedFraud || isFlagged
-                    ? 'border-status-flagged/25 bg-status-flagged/5'
+                    ? 'border-status-flagged/40 bg-status-flagged/5 text-status-flagged'
                     : isUnderReview
-                      ? 'border-status-review/25 bg-status-review/5'
-                      : 'border-status-verified/25 bg-status-verified/5'
+                      ? 'border-status-review/40 bg-status-review/5 text-status-review'
+                      : 'border-status-verified/40 bg-status-verified/5 text-status-verified'
                 }`}>
-                  <div className={`flex items-center gap-1.5 font-bold uppercase mb-1 text-[10px] ${
-                    isConfirmedFraud || isFlagged ? 'text-status-flagged' : isUnderReview ? 'text-status-review' : 'text-status-verified'
-                  }`}>
+                  <div className="flex items-center gap-1.5 font-bold uppercase mb-1.5 text-[10px]">
                     {isConfirmedFraud || isFlagged ? <AlertTriangle size={13} /> : isUnderReview ? <Activity size={13} /> : <CheckCircle size={13} />}
-                    <span>Audit Finding & Ruling:</span>
+                    <span>Audit Finding &amp; Ruling:</span>
                   </div>
-                  <p className="text-[11px] leading-relaxed text-dossier-text font-medium break-words">
+                  <p className="text-[11px] leading-relaxed text-dossier-text break-words">
                     {caseDetail.log.flag_reason || "Audit Check Passed: GPS telemetry confirms Bhandewadi dump yard drop-off, physical gate RFID entry verified, and weight is within expected contractor tolerance limits."}
                   </p>
                 </div>
 
-                {/* Independent Gate Verification Evidence */}
+                {/* Gate Verification Evidence */}
                 {caseDetail.gate_log && (
-                  <div className={`mt-3 border p-2.5 rounded-none font-mono text-[10px] flex items-center justify-between ${
+                  <div className={`mt-3 p-2.5 border text-[10px] font-mono flex items-center justify-between ${
                     caseDetail.gate_log.verified
                       ? 'border-status-verified/30 bg-status-verified/5 text-status-verified'
                       : 'border-status-flagged/30 bg-status-flagged/5 text-status-flagged'
@@ -367,7 +352,7 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                       {caseDetail.gate_log.verified ? <DoorClosed size={12} /> : <AlertTriangle size={12} />}
                       <span>PHYSICAL GATE BOOM-BARRIER:</span>
                     </div>
-                    <span className="font-bold">
+                    <span className="font-bold text-[9px] uppercase">
                       {caseDetail.gate_log.verified
                         ? `ENTRY CONFIRMED (${caseDetail.gate_log.details?.gate_id || 'GATE-1'})`
                         : 'NO ENTRY RECORD FOUND'}
@@ -375,35 +360,33 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                   </div>
                 )}
 
-                {/* ========================================================================= */}
+                {/* ================================================================= */}
                 {/* AUDITOR RULING & ON-CHAIN ACTIONS */}
-                {/* ========================================================================= */}
-                <div className="mt-6 pt-4 border-t border-dashed border-dossier-border space-y-3">
-                  
-                  {/* Verify status button (read-only EVM check) */}
+                {/* ================================================================= */}
+                <div className="mt-5 pt-4 border-t border-dashed border-dossier-border space-y-3">
+
+                  {/* Verify button */}
                   <button
                     onClick={handleVerifyOnChain}
                     disabled={isVerifying || !caseDetail.log.tx_hash}
-                    className="w-full flex items-center justify-center gap-2 border border-dossier-text py-2 text-xs font-mono font-bold hover:bg-dossier-text/5 transition-colors uppercase cursor-pointer disabled:opacity-50"
+                    className="w-full border border-dossier-border text-dossier-text text-xs font-mono font-bold py-2 px-3 hover:bg-dossier-text/5 transition-colors uppercase cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     <Key size={14} />
                     {isVerifying ? "Verifying Root Merkle..." : "Verify Ledger Seal Status"}
                   </button>
 
-                  {/* 1. CASE ALREADY RULED UPON (READ-ONLY DISPLAY) */}
+                  {/* 1. CASE ALREADY RULED UPON */}
                   {isRuledOn && (
-                    <div className={`p-3 border font-mono text-xs space-y-1.5 ${
-                      isConfirmedFraud 
-                        ? 'border-status-flagged bg-status-flagged/10 text-status-flagged' 
-                        : 'border-status-verified bg-status-verified/10 text-status-verified'
+                    <div className={`p-3 border text-xs font-mono space-y-1.5 ${
+                      isConfirmedFraud
+                        ? 'border-status-flagged/40 bg-status-flagged/5'
+                        : 'border-status-verified/40 bg-status-verified/5'
                     }`}>
-                      <div className="flex items-center gap-1.5 font-bold uppercase text-[11px]">
+                      <div className={`flex items-center gap-1.5 font-bold uppercase text-[11px] ${isConfirmedFraud ? 'text-status-flagged' : 'text-status-verified'}`}>
                         <Gavel size={14} />
-                        <span>
-                          {isConfirmedFraud ? "RULING: CONFIRMED FRAUD VIOLATION" : "RULING: DISMISSED AS FALSE POSITIVE"}
-                        </span>
+                        <span>{isConfirmedFraud ? "RULING: CONFIRMED FRAUD VIOLATION" : "RULING: DISMISSED AS FALSE POSITIVE"}</span>
                       </div>
-                      <p className="text-[10px] text-dossier-text font-medium">
+                      <p className="text-[10px] text-dossier-text">
                         <strong className="text-dossier-muted uppercase">Auditor Note:</strong> {caseDetail.log.auditor_note || "No justification provided."}
                       </p>
                       <p className="text-[9px] text-dossier-muted truncate font-bold">
@@ -412,30 +395,29 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                     </div>
                   )}
 
-                  {/* 2. FLAGGED OR UNDER REVIEW CASE - AUDITOR RULING ACTIONS */}
+                  {/* 2. FLAGGED OR UNDER REVIEW - AUDITOR RULING ACTIONS */}
                   {role === 'auditor' && isFlaggedOrReview && !isRuledOn && (
                     <div className="space-y-2">
-                      {/* If no ruling active, show the two action buttons */}
                       {!activeRuling && (
                         <div className="space-y-2">
-                          <span className="font-mono text-[10px] text-dossier-muted block uppercase font-bold text-center">
+                          <span className="font-mono text-[9px] text-dossier-muted block uppercase font-bold text-center">
                             Lead Auditor Forensic Ruling Required:
                           </span>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <button
                               onClick={() => { setActiveRuling('confirmed_fraud'); setRulingNote(''); setRulingError(''); }}
-                              className="w-full flex items-center justify-center gap-1.5 py-2 px-2 text-[10px] font-mono font-bold border border-status-flagged text-status-flagged bg-status-flagged/5 hover:bg-status-flagged/15 transition-colors uppercase cursor-pointer"
+                              className="w-full border border-status-flagged text-status-flagged py-2 text-xs font-mono font-bold uppercase hover:bg-status-flagged/10 cursor-pointer flex items-center justify-center gap-1.5"
                             >
                               <ShieldAlert size={13} />
-                              <span>Confirm Violation & Seal</span>
+                              <span>Confirm Violation &amp; Seal</span>
                             </button>
 
                             <button
                               onClick={() => { setActiveRuling('cleared'); setRulingNote(''); setRulingError(''); }}
-                              className="w-full flex items-center justify-center gap-1.5 py-2 px-2 text-[10px] font-mono font-bold border border-status-verified text-status-verified bg-status-verified/5 hover:bg-status-verified/15 transition-colors uppercase cursor-pointer"
+                              className="w-full border border-status-verified text-status-verified py-2 text-xs font-mono font-bold uppercase hover:bg-status-verified/10 cursor-pointer flex items-center justify-center gap-1.5"
                             >
                               <CheckCircle size={13} />
-                              <span>Dismiss as False Positive & Seal</span>
+                              <span>Dismiss &amp; Seal</span>
                             </button>
                           </div>
                         </div>
@@ -443,10 +425,10 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
 
                       {/* Active Ruling Input Dialog */}
                       {activeRuling && (
-                        <div className={`border p-3 space-y-2.5 font-mono text-xs ${
-                          activeRuling === 'confirmed_fraud' 
-                            ? 'border-status-flagged bg-status-flagged/5' 
-                            : 'border-status-verified bg-status-verified/5'
+                        <div className={`p-3 border space-y-2.5 font-mono text-xs ${
+                          activeRuling === 'confirmed_fraud'
+                            ? 'border-status-flagged/50 bg-status-flagged/5'
+                            : 'border-status-verified/50 bg-status-verified/5'
                         }`}>
                           <div className="flex justify-between items-center">
                             <span className={`font-bold uppercase text-[10px] flex items-center gap-1 ${
@@ -469,17 +451,17 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                             onChange={(e) => { setRulingNote(e.target.value); setRulingError(''); }}
                             placeholder={
                               activeRuling === 'confirmed_fraud'
-                                ? "State your forensic ruling justification (e.g. GPS route contradiction verified against checkpoint CCTV; billing penalty imposed)..."
-                                : "State clearance explanation (e.g. valid route deviation due to road work; manual log verified)..."
+                                ? "State your forensic ruling justification..."
+                                : "State clearance explanation..."
                             }
                             rows={3}
-                            className="w-full bg-dossier-bg border border-dossier-border p-2 font-mono text-xs text-dossier-text placeholder:text-dossier-muted focus:outline-none resize-none"
+                            className="w-full bg-dossier-bg border border-dossier-border px-2 py-2 font-mono text-xs text-dossier-text focus:outline-none focus:border-dossier-text resize-none"
                             autoFocus
                             disabled={isSubmittingRuling}
                           />
 
                           {rulingError && (
-                            <div className="font-mono text-[10px] font-bold text-status-flagged bg-status-flagged/10 border border-status-flagged/30 p-1.5 flex items-center gap-1">
+                            <div className="font-mono text-[10px] font-bold text-status-flagged flex items-center gap-1">
                               <AlertTriangle size={11} className="shrink-0" />
                               <span>{rulingError}</span>
                             </div>
@@ -490,7 +472,7 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                               type="button"
                               onClick={() => { setActiveRuling(null); setRulingNote(''); setRulingError(''); }}
                               disabled={isSubmittingRuling}
-                              className="px-3 py-1.5 border border-dossier-border text-dossier-muted font-mono text-[10px] font-bold uppercase hover:bg-dossier-text/5 cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                              className="px-3 py-1 border border-dossier-border font-mono text-[10px] text-dossier-muted hover:text-dossier-text hover:bg-dossier-text/5 uppercase font-bold cursor-pointer disabled:opacity-50 flex items-center gap-1"
                             >
                               <X size={11} />
                               <span>Cancel</span>
@@ -500,10 +482,10 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                               type="button"
                               onClick={() => handleExecuteRuling(activeRuling)}
                               disabled={isSubmittingRuling || (activeRuling === 'confirmed_fraud' && !rulingNote.trim())}
-                              className={`px-3.5 py-1.5 font-mono text-[10px] font-bold uppercase text-white cursor-pointer disabled:opacity-50 flex items-center gap-1 ${
-                                activeRuling === 'confirmed_fraud' 
-                                  ? 'bg-status-flagged hover:bg-status-flagged/90 border border-status-flagged' 
-                                  : 'bg-status-verified hover:bg-status-verified/90 border border-status-verified'
+                              className={`px-3 py-1 border font-mono text-[10px] uppercase font-bold cursor-pointer disabled:opacity-50 flex items-center gap-1 ${
+                                activeRuling === 'confirmed_fraud'
+                                  ? 'border-status-flagged text-status-flagged hover:bg-status-flagged/10'
+                                  : 'border-status-verified text-status-verified hover:bg-status-verified/10'
                               }`}
                             >
                               <Send size={11} />
@@ -515,12 +497,12 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                     </div>
                   )}
 
-                  {/* 3. CLEAN RECORD (STATUS === 'VERIFIED') - SINGLE GENERIC SEAL BUTTON */}
+                  {/* 3. CLEAN RECORD - SEAL BUTTON */}
                   {role === 'auditor' && isVerified && !caseDetail.log.tx_hash && (
                     <button
                       onClick={() => handleExecuteRuling('cleared')}
                       disabled={isSubmittingRuling}
-                      className="w-full py-2 text-xs font-mono font-bold border border-status-verified text-status-verified hover:bg-status-verified/5 transition-colors uppercase cursor-pointer"
+                      className="w-full border border-status-verified text-status-verified py-2 text-xs font-mono font-bold uppercase hover:bg-status-verified/10 cursor-pointer disabled:opacity-50"
                     >
                       {isSubmittingRuling ? "Sealing on EVM..." : "Cryptographically Seal & Lock Record on EVM"}
                     </button>
@@ -529,7 +511,7 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
 
                 {/* Verification result snippet */}
                 {verificationResult && (
-                  <div className="mt-4 p-3 bg-dossier-bg border border-dossier-border font-mono text-[10px] space-y-1">
+                  <div className="mt-4 border border-status-verified/40 bg-status-verified/5 p-3 font-mono text-[10px] space-y-1">
                     <div className="flex items-center gap-1 text-status-verified font-bold uppercase">
                       <CheckCircle size={12} />
                       <span>Ledger Root Verified Against Block #{verificationResult.blockNumber}</span>
@@ -541,44 +523,44 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
               </div>
             </div>
 
-            {/* Right Panel: GIS Spatial Intelligence Evidence */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="border border-dossier-border p-6 bg-dossier-card">
-                
+            {/* Right Panel: GIS Spatial Intelligence */}
+            <div className="lg:col-span-7">
+              <div className="border border-dossier-border p-6 bg-dossier-card h-full flex flex-col justify-between">
+
                 {/* GIS Card Header */}
-                <div className="border-b border-dossier-border pb-3 flex justify-between items-center">
+                <div className="border-b border-dossier-border pb-3 flex justify-between items-center mb-4">
                   <div>
-                    <h3 className="font-serif text-lg font-black uppercase text-dossier-text">Spatial Trajectory Telemetry</h3>
+                    <h3 className="font-serif text-lg font-extrabold uppercase tracking-tight text-dossier-text">Spatial Trajectory Telemetry</h3>
                     <p className="text-[10px] text-dossier-muted font-mono uppercase mt-0.5 font-bold">
                       {caseDetail.trip?.route_name || "GPS Fleet Track Sequence"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1 font-mono text-[9px] font-bold">
-                    <span className="w-2 h-2 rounded-full bg-status-verified animate-ping"></span>
+                  <div className="flex items-center gap-1.5 font-mono text-[9px] font-bold">
+                    <span className="w-2 h-2 rounded-full bg-status-verified animate-pulse inline-block"></span>
                     <span className="text-status-verified uppercase font-bold">GIS Active</span>
                   </div>
                 </div>
 
                 {/* Map Viewer */}
-                <div className="h-[450px] w-full my-6 border border-dossier-border relative">
-                  <MapContainer 
+                <div className="h-[420px] w-full border border-dossier-border relative overflow-hidden">
+                  <MapContainer
                     key={selectedCaseId}
-                    center={mapCenter} 
-                    zoom={12} 
+                    center={mapCenter}
+                    zoom={12}
                     style={{ height: '100%', width: '100%' }}
                     zoomControl={false}
                   >
                     <TileLayer
-                      url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                      url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
                       attribution='&copy; <a href="https://carto.com/">CARTO</a>'
                     />
 
                     {/* Nagpur city boundary outline */}
                     {nagpurBoundary && (
-                      <GeoJSON 
-                        data={nagpurBoundary as any} 
+                      <GeoJSON
+                        data={nagpurBoundary as any}
                         style={{
-                          color: "#8c8b7f",
+                          color: "rgba(30, 30, 30, 0.5)",
                           fillColor: "transparent",
                           weight: 1.5,
                           dashArray: "4, 4"
@@ -590,22 +572,22 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                     <CircleMarker
                       center={dumpYardCoords}
                       pathOptions={{
-                        color: "#9e2a2b",
-                        fillColor: "#9e2a2b",
-                        fillOpacity: 0.12,
-                        weight: 1,
-                        dashArray: "3, 3"
+                        color: "var(--color-status-flagged)",
+                        fillColor: "var(--color-status-flagged)",
+                        fillOpacity: 0.05,
+                        weight: 1.5,
+                        dashArray: "4, 4"
                       }}
-                      radius={30}
+                      radius={35}
                     />
 
                     {/* Bhandewadi Dumping Ground Core Marker */}
                     <CircleMarker
                       center={dumpYardCoords}
                       pathOptions={{
-                        color: "#9e2a2b",
-                        fillColor: "#9e2a2b",
-                        fillOpacity: 0.8,
+                        color: "var(--color-status-flagged)",
+                        fillColor: "var(--color-status-flagged)",
+                        fillOpacity: 0.6,
                         weight: 2
                       }}
                       radius={10}
@@ -625,9 +607,9 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                     <Polyline
                       positions={tripRoute}
                       pathOptions={{
-                        color: isConfirmedFraud || isFlagged ? "#9e2a2b" : "#2d6a4f",
+                        color: isConfirmedFraud || isFlagged ? "var(--color-status-flagged)" : "var(--color-status-verified)",
                         weight: 3,
-                        dashArray: isConfirmedFraud || isFlagged ? "3, 5" : undefined
+                        dashArray: isConfirmedFraud || isFlagged ? "4, 6" : undefined
                       }}
                     />
 
@@ -635,8 +617,8 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                     {startPoint && (
                       <CircleMarker
                         center={startPoint}
-                        pathOptions={{ color: "#2d6a4f", fillColor: "#2d6a4f", fillOpacity: 0.8, weight: 2 }}
-                        radius={6}
+                        pathOptions={{ color: "var(--color-status-verified)", fillColor: "var(--color-status-verified)", fillOpacity: 0.7, weight: 2 }}
+                        radius={7}
                       >
                         <Popup>
                           <div className="font-mono text-xs font-bold">Route Origin</div>
@@ -649,9 +631,9 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                       <CircleMarker
                         center={endPoint}
                         pathOptions={{
-                          color: isGPSContradiction ? "#9e2a2b" : "#2d6a4f",
-                          fillColor: isGPSContradiction ? "#9e2a2b" : "#2d6a4f",
-                          fillOpacity: 0.8,
+                          color: isGPSContradiction ? "var(--color-status-flagged)" : "var(--color-status-verified)",
+                          fillColor: isGPSContradiction ? "var(--color-status-flagged)" : "var(--color-status-verified)",
+                          fillOpacity: 0.7,
                           weight: 2
                         }}
                         radius={7}
@@ -670,29 +652,29 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                     )}
                   </MapContainer>
 
-                  <div className="absolute top-2 left-2 bg-dossier-bg border border-dossier-border px-2 py-1 text-[9px] font-mono z-[1000] font-bold text-dossier-text">
-                    GPS TELEMETRY EXHIBIT: {caseDetail.trip?.id || caseDetail.log.id}
+                  <div className="absolute top-2 left-2 bg-dossier-bg border border-dossier-border px-2 py-1 text-[9px] font-mono z-[1000] font-bold uppercase">
+                    GPS EXHIBIT: {caseDetail.trip?.id || caseDetail.log.id}
                   </div>
 
                   {/* Spatial Contradiction Alert Banner */}
                   {isGPSContradiction && (
-                    <div className="absolute bottom-2 left-2 right-2 bg-status-flagged/95 text-white px-3 py-1.5 text-[10px] font-mono font-bold uppercase z-[1000] border border-status-flagged shadow flex items-center justify-between">
+                    <div className="absolute bottom-2 left-2 right-2 bg-status-flagged/90 text-white px-3 py-2 text-[10px] font-mono font-bold uppercase z-[1000] flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <AlertTriangle size={13} className="animate-pulse" />
                         <span>GPS CONTRADICTION: VEHICLE NEVER ENTERED DUMP YARD GEOFENCE</span>
                       </div>
-                      <span className="bg-black/30 px-1.5 py-0.5 text-[8px] tracking-wider">FLAGGED EVIDENCE</span>
+                      <span className="border border-white/50 px-1.5 py-0.5 text-[8px] shrink-0">FLAGGED</span>
                     </div>
                   )}
                 </div>
 
                 {/* Telemetry verification footer */}
-                <div className="font-mono text-[10px] border-t border-dossier-border pt-4 flex justify-between items-center text-dossier-muted uppercase font-bold">
-                  <div className="flex items-center gap-1.5 font-bold">
-                    <Activity size={14} className={isConfirmedFraud || isFlagged ? "text-status-flagged" : "text-status-verified"} />
-                    <span>GPS Telemetry status: {isConfirmedFraud || isFlagged ? "Flagged Telemetry" : "Verified Route"}</span>
+                <div className="font-mono text-[10px] border-t border-dossier-border pt-4 mt-4 flex justify-between items-center text-dossier-muted uppercase font-bold">
+                  <div className="flex items-center gap-1.5">
+                    <Activity size={13} className={isConfirmedFraud || isFlagged ? "text-status-flagged" : "text-status-verified"} />
+                    <span>GPS Status: {isConfirmedFraud || isFlagged ? "Flagged Telemetry" : "Verified Route"}</span>
                   </div>
-                  <span>Exhibit Ref: {caseDetail.trip?.id || caseDetail.log.id}</span>
+                  <span>Exhibit: {caseDetail.trip?.id || caseDetail.log.id}</span>
                 </div>
               </div>
             </div>

@@ -219,7 +219,7 @@ export const PublicTransparency: React.FC<PublicTransparencyProps> = ({ data: in
       {/* Historical Chronology timeline */}
       <div className="border border-dossier-border p-6 bg-dossier-card">
         <h3 className="font-serif text-lg font-extrabold uppercase tracking-tight pb-3 border-b border-dossier-border mb-6 text-dossier-text">
-          Inquiry Chronology & Timeline (2026)
+          Inquiry Chronology &amp; Timeline (2026)
         </h3>
 
         <div className="relative border-l border-dossier-border ml-4 space-y-6 font-mono text-xs">
@@ -236,4 +236,3 @@ export const PublicTransparency: React.FC<PublicTransparencyProps> = ({ data: in
     </div>
   );
 };
-
