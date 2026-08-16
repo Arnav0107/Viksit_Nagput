@@ -285,8 +285,8 @@ function App() {
                   <span className="material-symbols-outlined text-[18px]">person</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-xs font-semibold truncate m-0 ${premiumVibe ? 'text-slate-200' : 'text-slate-900'}`}>Public Auditor</p>
-                  <p className={`text-[10px] truncate m-0 ${premiumVibe ? 'text-slate-500' : 'text-slate-500'}`}>Read-Only Access</p>
+                  <p className={`text-xs font-semibold truncate m-0 ${premiumVibe ? 'text-slate-200' : 'text-slate-900'}`}>{displayName || 'Public Citizen'}</p>
+                  <p className={`text-[10px] truncate m-0 ${premiumVibe ? 'text-slate-500' : 'text-slate-500'}`}>{role ? `${role.charAt(0).toUpperCase()}${role.slice(1)} Session` : 'Read-Only Access'}</p>
                 </div>
               </div>
               <button onClick={() => navigateToView('repairs')} className="w-full bg-orange-500 text-white font-bold tracking-wide uppercase text-sm py-3 rounded-lg hover:-translate-y-[2px] transition-transform shadow-sm flex justify-center items-center gap-2 cursor-pointer">

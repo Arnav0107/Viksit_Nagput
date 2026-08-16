@@ -365,7 +365,7 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                 <button
                   onClick={handleVerifyOnChain}
                   disabled={isVerifying || !caseDetail.log.tx_hash}
-                  className="btn-ghost font-semibold text-xs"
+                  className="btn-tertiary font-semibold text-xs"
                   style={{ width: '100%', justifyContent: 'center', marginTop: 12 }}
                 >
                   <Key size={14} /> {isVerifying ? "Verifying Merkle Root..." : "Verify Ledger Seal Status"}

@@ -125,10 +125,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onExplorePublic, initialE
       </div>
 
       {/* Right login panel */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 32px' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 32px', overflowY: 'auto', maxHeight: '100vh' }}>
         <div style={{ width: '100%', maxWidth: 420 }}>
           <h1 className="t-h1" style={{ marginBottom: 6 }}>Sign in to AuditChain</h1>
-          <p style={{ color: 'var(--color-text-muted)', marginBottom: 28, fontSize: 14 }}>
+          <p style={{ color: 'var(--color-text-muted)', marginBottom: 16, fontSize: 14 }}>
             Select your role or enter credentials below.
           </p>
 
@@ -141,7 +141,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onExplorePublic, initialE
           )}
 
           {/* Quick-select roles */}
-          <div style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
               Quick-select demo role
             </div>
@@ -188,14 +188,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onExplorePublic, initialE
           </div>
 
           {/* Divider */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
             <span style={{ fontSize: 12, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>or sign in manually</span>
             <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
           </div>
 
           {/* Manual form */}
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-base)', marginBottom: 6 }}>Username</label>
               <input
