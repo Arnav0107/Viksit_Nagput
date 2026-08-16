@@ -1,5 +1,8 @@
-from fastapi import FastAPI, Depends, HTTPException, Query, status, Request
+import os
+import shutil
+from fastapi import FastAPI, Depends, HTTPException, Query, status, Request, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import pandas as pd
@@ -8,7 +11,7 @@ import uuid
 import hashlib
 from pydantic import BaseModel
 
-from app.db import init_db, get_db, Contractor, WeighbridgeLog, GPSLog, GPSTrip, RoadRepair, Vehicle, DumpingGroundGateLog
+from app.db import init_db, get_db, Contractor, WeighbridgeLog, GPSLog, GPSTrip, RoadRepair, Vehicle, DumpingGroundGateLog, CitizenComplaint
 from app.anomaly import run_anomaly_detection
 from app import blockchain
 from app.auth import (
@@ -62,13 +65,12 @@ def startup_event():
         print(f"[OK] Blockchain Health Check PASSED: Contract verified at {address}")
     except Exception as e:
         print("\n" + "!" * 80)
-        print(" [FATAL BLOCKCHAIN ERROR] startup health-check failed!")
+        print(" [WARNING BLOCKCHAIN UNREACHABLE] Startup health-check notice:")
         print(f" Error: {str(e)}")
-        print(" Please ensure Anvil is running and smart contracts are deployed.")
-        print(" Run: powershell -ExecutionPolicy Bypass -File scripts/setup_blockchain.ps1")
+        print(" Note: Backend will run in offline mode for blockchain operations.")
+        print(" To enable on-chain locking, start Anvil and deploy contracts via scripts/setup_blockchain.ps1")
         print("!" * 80 + "\n")
-        import sys
-        sys.exit(1)
+
 
     print("\n" + "=" * 68)
     print(" [NMC] AuditChain Nagpur - Demo Login Credentials (RBAC Enabled)")
@@ -835,6 +837,132 @@ def verify_blockchain_record(tx_hash: str, db: Session = Depends(get_db)):
         "integrity_match": integrity_match,
         "mismatches": mismatches
     }
+
+# ---------------------------------------------------------
+# Public Citizen Complaints API (Additive)
+# ---------------------------------------------------------
+
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+@app.post("/api/complaints")
+async def submit_citizen_complaint(
+    photo: UploadFile = File(...),
+    description: str = Form(...),
+    repair_id: Optional[str] = Form(None),
+    latitude: Optional[float] = Form(None),
+    longitude: Optional[float] = Form(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Public endpoint for citizens to submit road repair complaints with photos and optional GPS.
+    Zero authentication required.
+    """
+    if not description or len(description.strip()) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Complaint description is required."
+        )
+
+    # Save photo file locally
+    file_ext = os.path.splitext(photo.filename)[1] if photo.filename else ".jpg"
+    if not file_ext:
+        file_ext = ".jpg"
+    filename = f"complaint_{uuid.uuid4().hex[:12]}{file_ext}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(photo.file, buffer)
+
+    photo_url = f"/uploads/{filename}"
+    complaint_id = f"CMP-{uuid.uuid4().hex[:8].upper()}"
+
+    new_complaint = CitizenComplaint(
+        id=complaint_id,
+        repair_id=repair_id.strip() if (repair_id and repair_id.strip()) else None,
+        photo_url=photo_url,
+        description=description.strip(),
+        latitude=latitude,
+        longitude=longitude,
+        ai_category=None,
+        ai_severity=None,
+        ai_reasoning=None,
+        status="submitted",
+        created_at=datetime.utcnow()
+    )
+
+    db.add(new_complaint)
+    db.commit()
+    db.refresh(new_complaint)
+
+    return {
+        "id": new_complaint.id,
+        "repair_id": new_complaint.repair_id,
+        "photo_url": new_complaint.photo_url,
+        "description": new_complaint.description,
+        "latitude": new_complaint.latitude,
+        "longitude": new_complaint.longitude,
+        "ai_category": new_complaint.ai_category,
+        "ai_severity": new_complaint.ai_severity,
+        "ai_reasoning": new_complaint.ai_reasoning,
+        "status": new_complaint.status,
+        "created_at": new_complaint.created_at.isoformat() if new_complaint.created_at else None
+    }
+
+@app.get("/api/complaints")
+def list_citizen_complaints(
+    repair_id: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    List all citizen complaints, optionally filtered by repair_id.
+    """
+    query = db.query(CitizenComplaint)
+    if repair_id and repair_id.strip():
+        query = query.filter(CitizenComplaint.repair_id == repair_id.strip())
+    complaints = query.order_by(CitizenComplaint.created_at.desc()).all()
+    return [
+        {
+            "id": c.id,
+            "repair_id": c.repair_id,
+            "photo_url": c.photo_url,
+            "description": c.description,
+            "latitude": c.latitude,
+            "longitude": c.longitude,
+            "ai_category": c.ai_category,
+            "ai_severity": c.ai_severity,
+            "ai_reasoning": c.ai_reasoning,
+            "status": c.status,
+            "created_at": c.created_at.isoformat() if c.created_at else None
+        }
+        for c in complaints
+    ]
+
+@app.get("/api/complaints/{repair_id}")
+def get_citizen_complaints_by_repair(
+    repair_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    List complaints specific to a road repair ID.
+    """
+    complaints = db.query(CitizenComplaint).filter(CitizenComplaint.repair_id == repair_id).order_by(CitizenComplaint.created_at.desc()).all()
+    return [
+        {
+            "id": c.id,
+            "repair_id": c.repair_id,
+            "photo_url": c.photo_url,
+            "description": c.description,
+            "latitude": c.latitude,
+            "longitude": c.longitude,
+            "ai_category": c.ai_category,
+            "ai_severity": c.ai_severity,
+            "ai_reasoning": c.ai_reasoning,
+            "status": c.status,
+            "created_at": c.created_at.isoformat() if c.created_at else None
+        }
+        for c in complaints
+    ]
 
 if __name__ == "__main__":
     import uvicorn

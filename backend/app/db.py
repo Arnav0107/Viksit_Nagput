@@ -99,6 +99,24 @@ class DumpingGroundGateLog(Base):
     entry_timestamp = Column(DateTime, nullable=False, default=datetime.utcnow)
     gate_id = Column(String, nullable=False, default="BHANDEWADI-GATE-1")
 
+class CitizenComplaint(Base):
+    __tablename__ = "citizen_complaints"
+
+    id = Column(String, primary_key=True, index=True) # UUID string
+    repair_id = Column(String, ForeignKey("road_repairs.id"), nullable=True)
+    photo_url = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    ai_category = Column(String, nullable=True)
+    ai_severity = Column(String, nullable=True)
+    ai_reasoning = Column(Text, nullable=True)
+    status = Column(String, default="submitted")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    road_repair = relationship("RoadRepair", backref="citizen_complaints")
+
+
 def get_db():
     db = SessionLocal()
     try:

@@ -1,14 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { Scale, ShieldCheck, ShieldAlert, CheckCircle, ExternalLink, RefreshCw, FileText } from 'lucide-react';
+import type { Language } from '../i18n/publicTransparency';
+import { publicTransparencyTranslations } from '../i18n/publicTransparency';
 
 interface PublicTransparencyProps {
   data?: any;
 }
 
 export const PublicTransparency: React.FC<PublicTransparencyProps> = ({ data: initialData }) => {
+  const [lang, setLang] = useState<Language>(() => {
+    const saved = localStorage.getItem('auditchain_lang');
+    if (saved === 'en' || saved === 'hi' || saved === 'mr') {
+      return saved;
+    }
+    return 'en';
+  });
+
   const [overviewData, setOverviewData] = useState<any>(initialData || null);
   const [sealedRecords, setSealedRecords] = useState<any[]>([]);
   const [loadingRecords, setLoadingRecords] = useState<boolean>(true);
+
+  const t = publicTransparencyTranslations[lang] || publicTransparencyTranslations.en;
+
+  const handleLanguageChange = (newLang: Language) => {
+    setLang(newLang);
+    localStorage.setItem('auditchain_lang', newLang);
+  };
 
   useEffect(() => {
     if (!overviewData) {
@@ -35,11 +52,12 @@ export const PublicTransparency: React.FC<PublicTransparencyProps> = ({ data: in
         .map((item: any) => ({
           type: 'weighbridge',
           id: item.id,
-          title: `Weigh Ticket ${item.id} — ${item.contractor_name || 'Contractor'}`,
+          contractor_name: item.contractor_name,
           timestamp: item.timestamp,
           status: item.status,
           tx_hash: item.tx_hash || '0x' + Math.random().toString(16).substring(2, 42),
-          note: item.auditor_note || item.flag_reason || 'Verified on-chain'
+          auditor_note: item.auditor_note,
+          flag_reason: item.flag_reason
         }));
 
       const roadSealed = (Array.isArray(roadData) ? roadData : [])
@@ -47,11 +65,12 @@ export const PublicTransparency: React.FC<PublicTransparencyProps> = ({ data: in
         .map((item: any) => ({
           type: 'road',
           id: item.id,
-          title: `Road Restoration ${item.id} — ${item.ward_name}`,
+          ward_name: item.ward_name,
           timestamp: item.work_completed_date || new Date().toISOString(),
           status: item.status,
           tx_hash: item.tx_hash || '0x' + Math.random().toString(16).substring(2, 42),
-          note: item.auditor_note || `SLA Compliance Verified (${item.complaints_count || 0} complaints)`
+          auditor_note: item.auditor_note,
+          complaints_count: item.complaints_count
         }));
 
       const combined = [...wbSealed, ...roadSealed].sort(
@@ -77,51 +96,83 @@ export const PublicTransparency: React.FC<PublicTransparencyProps> = ({ data: in
     const id = contractor.id;
     const fraudCount = contractor.fraud_flags_confirmed || 0;
     if (id === 'bvg-india' || fraudCount >= 2) {
-      return { grade: 'F', color: '#DC2626', desc: 'Multiple confirmed fraud violations sealed on-chain. Severe weight duplication anomalies.' };
+      return { grade: 'F', color: '#DC2626', desc: t.gradeFDesc };
     }
     if (id === 'antony-waste' || fraudCount === 1) {
-      return { grade: 'D-', color: '#DC2626', desc: 'Active forensic inquiry over 6,400+ MT unexplained tonnage drop and spatial GPS contradictions.' };
+      return { grade: 'D-', color: '#DC2626', desc: t.gradeDMinusDesc };
     }
     if (id === 'amrut-repairs') {
-      return { grade: 'C+', color: '#D97706', desc: 'Road repair restorations triggered automated SLA holds in Dharampeth.' };
+      return { grade: 'C+', color: '#D97706', desc: t.gradeCPlusDesc };
     }
-    return { grade: 'B', color: '#059669', desc: 'Compliance metrics within baseline parameters.' };
+    return { grade: 'B', color: '#059669', desc: t.gradeBDesc };
   };
 
-  const timelineEvents = [
-    { date: "April 1, 2026", title: "Monitoring Systems Activated", desc: "NMC launches digital weighbridge ticketing tracking under new contractor guidelines." },
-    { date: "May 20, 2026", title: "First GPS Discrepancies Flagged", desc: "AuditChain flags multiple trips where registered truck dump weight has zero corresponding dump site GPS entries." },
-    { date: "June 15, 2026", title: "Suspicious Weight Pattern Allegations", desc: "Citizen groups publish weighbridge logs showing exact repeating heavy weights registered by BVG India trucks." },
-    { date: "July 12, 2026", title: "Formal Waste Collection Inquiry Ordered", desc: "NMC Commissioner orders full forensic audit over 6,400+ MT sudden drop in monthly garbage tonnage billing." },
-    { date: "August 15, 2026", title: "AuditChain Public Dashboard Released", desc: "Platform opened for public scrutiny to allow citizens to trace locked municipal waste tickets and report road SLA breaches." }
-  ];
+  const timelineEvents = t.timelineEvents;
 
   return (
     <div className="flex flex-col w-full">
       {/* ── Header ──────────────────────────────────────────────── */}
-      <section className="mb-8 max-w-3xl">
-        <div className="inline-flex items-center gap-2 bg-orange-50 border border-orange-200 px-3 py-1.5 rounded-full w-fit mb-4">
-          <span className="material-symbols-outlined text-[16px] text-orange-600">gavel</span>
-          <span className="text-xs text-orange-700 uppercase tracking-wider font-semibold">Immutable Audit Records</span>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
+        <section className="max-w-3xl">
+          <div className="inline-flex items-center gap-2 bg-orange-50 border border-orange-200 px-3 py-1.5 rounded-full w-fit mb-4">
+            <span className="material-symbols-outlined text-[16px] text-orange-600">gavel</span>
+            <span className="text-xs text-orange-700 uppercase tracking-wider font-semibold">{t.immutableAuditRecords}</span>
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight mb-6 text-slate-900">
+            {t.publicLedger}
+          </h1>
+          <p className="text-sm text-slate-600 max-w-2xl text-balance">
+            {t.publicAccessChannel}
+          </p>
+        </section>
+
+        {/* ── Language Switcher ────────────────────────────────────── */}
+        <div className="inline-flex items-center bg-slate-100 p-1 rounded-full border border-slate-200 shrink-0 self-start">
+          <button
+            type="button"
+            onClick={() => handleLanguageChange('en')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
+              lang === 'en'
+                ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            English
+          </button>
+          <button
+            type="button"
+            onClick={() => handleLanguageChange('hi')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
+              lang === 'hi'
+                ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            हिंदी
+          </button>
+          <button
+            type="button"
+            onClick={() => handleLanguageChange('mr')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
+              lang === 'mr'
+                ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            मराठी
+          </button>
         </div>
-        <h1 className="text-3xl font-bold tracking-tight mb-6 text-slate-900">
-          Public Ledger
-        </h1>
-        <p className="text-sm text-slate-600 max-w-2xl text-balance">
-          Public Access Channel — Municipal Compliance Record. All weighbridge tickets shown on this portal are cryptographically locked on-chain and cannot be edited.
-        </p>
-      </section>
+      </div>
 
       {/* ── Alert Banner ──────────────────────────────────────────── */}
       <div className="bg-error-container/40 border border-error-container rounded-lg px-4 py-3 flex gap-3 items-start shadow-sm">
         <span className="material-symbols-outlined text-error mt-0.5">warning</span>
         <div>
           <div className="font-label-bold text-label-bold text-on-error-container mb-1">
-            Active Forensic Inquiry: IN PROGRESS
+            {t.activeForensicInquiry}
           </div>
           <p className="font-body-md text-body-md text-on-error-container/80 leading-relaxed m-0">
-            The Nagpur Municipal Corporation has ordered a formal inquiry into waste collection invoicing from April–July 2026. 
-            AuditChain provides tamper-proof blockchain evidence logs to investigation committees.
+            {t.inquiryNotice}
           </p>
         </div>
       </div>
@@ -129,16 +180,16 @@ export const PublicTransparency: React.FC<PublicTransparencyProps> = ({ data: in
       {/* ── Contractor Compliance Leaderboard ─────────────────────── */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 overflow-hidden w-full">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-slate-900 m-0">Contractor Compliance Leaderboard</h2>
+          <h2 className="text-xl font-semibold text-slate-900 m-0">{t.contractorComplianceLeaderboard}</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm text-slate-600">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3">Rank</th>
-                <th className="text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3">Contractor</th>
-                <th className="text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3 w-1/3">Compliance Score</th>
-                <th className="text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3 text-right">Grade</th>
+                <th className="text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3">{t.rank}</th>
+                <th className="text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3">{t.contractor}</th>
+                <th className="text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3 w-1/3">{t.complianceScore}</th>
+                <th className="text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3 text-right">{t.grade}</th>
               </tr>
             </thead>
             <tbody>
@@ -182,40 +233,48 @@ export const PublicTransparency: React.FC<PublicTransparencyProps> = ({ data: in
 
       {/* ── Chronology & Sealed Records (Grid) ──────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
+
         {/* Sealed Records Audit Chronology (7 cols) */}
         <div className="lg:col-span-7 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col mb-6">
           <div className="p-6 border-b border-slate-200 flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900 m-0 mb-1">Immutable On-Chain Audit</h2>
-              <p className="text-sm text-slate-500 font-medium m-0">Recently sealed exhibits on EVM</p>
+              <h2 className="text-xl font-semibold text-slate-900 m-0 mb-1">{t.immutableOnChainAudit}</h2>
+              <p className="text-sm text-slate-500 font-medium m-0">{t.recentlySealedExhibits}</p>
             </div>
             <button onClick={fetchSealedRecords} disabled={loadingRecords} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-slate-100 transition-colors text-xs font-semibold tracking-wide text-slate-600 cursor-pointer border border-slate-200 uppercase">
               <span className={`material-symbols-outlined text-[16px] ${loadingRecords ? "animate-spin" : ""}`}>refresh</span>
-              Refresh
+              {t.refresh}
             </button>
           </div>
 
           <div className="p-stack-sm flex-1">
             {loadingRecords ? (
-              <div className="py-10 text-center font-label-sm text-secondary font-medium">Querying Smart Contract Event Logs...</div>
+              <div className="py-10 text-center font-label-sm text-secondary font-medium">{t.queryingLogs}</div>
             ) : sealedRecords.length === 0 ? (
-              <div className="py-10 text-center font-label-sm text-secondary font-medium">No sealed blockchain exhibits registered yet.</div>
+              <div className="py-10 text-center font-label-sm text-secondary font-medium">{t.noSealedRecords}</div>
             ) : (
               <div className="flex flex-col">
                 {sealedRecords.slice(0, 8).map((rec: any, idx: number) => {
                   const isFraud = rec.status === 'confirmed_fraud';
+                  const title = rec.type === 'weighbridge'
+                    ? `${t.weighTicketPrefix} ${rec.id} — ${rec.contractor_name || t.contractorFallback}`
+                    : `${t.roadRestorationPrefix} ${rec.id} — ${rec.ward_name}`;
+                  const note = rec.type === 'weighbridge'
+                    ? (rec.auditor_note || rec.flag_reason || t.verifiedOnChain)
+                    : (rec.auditor_note || t.slaComplianceVerified(rec.complaints_count || 0));
+                  const statusLabel = t.status[rec.status] || rec.status;
+
                   return (
                     <div key={idx} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg mb-3 bg-white">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`material-symbols-outlined text-[16px] ${isFraud ? 'text-red-600' : 'text-orange-600'}`}>{isFraud ? 'gavel' : 'verified'}</span>
-                          <span className="text-sm font-bold text-slate-900 truncate">{rec.title}</span>
+                          <span className="text-sm font-bold text-slate-900 truncate">{title}</span>
                           <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${isFraud ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'}`}>
-                            {rec.status}
+                            {statusLabel}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 font-medium m-0 ml-6">{rec.note}</p>
+                        <p className="text-xs text-slate-500 font-medium m-0 ml-6">{note}</p>
                       </div>
 
                       <div className="text-right shrink-0">
@@ -223,7 +282,7 @@ export const PublicTransparency: React.FC<PublicTransparencyProps> = ({ data: in
                           {new Date(rec.timestamp).toLocaleDateString()}
                         </div>
                         <div className="font-mono text-xs text-green-600 w-32 truncate" title={rec.tx_hash}>
-                          Tx: {rec.tx_hash}
+                          {t.txPrefix} {rec.tx_hash}
                         </div>
                       </div>
                     </div>
@@ -237,12 +296,12 @@ export const PublicTransparency: React.FC<PublicTransparencyProps> = ({ data: in
         {/* Historical Chronology timeline (5 cols) */}
         <div className="lg:col-span-5 bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col gap-6">
           <h2 className="text-xl text-slate-900 font-semibold m-0 border-b border-slate-200 pb-4">
-            Inquiry Chronology (2026)
+            {t.inquiryChronology}
           </h2>
 
           <div className="flex flex-col relative pt-2">
             <div className="absolute left-[19px] top-4 bottom-4 w-[2px] bg-slate-200" />
-            
+
             {timelineEvents.map((event, idx) => (
               <div key={idx} className={`flex gap-4 relative z-10 ${idx < timelineEvents.length - 1 ? 'pb-6' : ''}`}>
                 <div className="w-10 h-10 rounded-full bg-red-50 border-2 border-white flex items-center justify-center shrink-0">

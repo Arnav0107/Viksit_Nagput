@@ -16,6 +16,8 @@ auditchain.db
 .env
 *.env
 .pytest_cache/
+backend/uploads/*
+!backend/uploads/.gitkeep
 
 # Node / Frontend
 node_modules/

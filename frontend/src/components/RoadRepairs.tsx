@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle, Clock, MapPin, MessageSquare, Key, AlertTriangle, Send, X, ShieldCheck, FileSpreadsheet, Info } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface RoadRepair {
   id: string;
@@ -54,6 +55,7 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
   const [loading, setLoading] = useState<boolean>(true);
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [sealErrors, setSealErrors] = useState<{ [repairId: string]: string }>({});
+  const [activeQrRepairId, setActiveQrRepairId] = useState<string | null>(null);
 
   const [reportedIds, setReportedIds] = useState<string[]>(() => {
     try {
@@ -89,7 +91,7 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
     setReportedIds((prev) => {
       if (prev.includes(repairId)) return prev;
       const next = [...prev, repairId];
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch (e) {}
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch (e) { }
       return next;
     });
   };
@@ -122,7 +124,7 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
         method: 'POST', headers, body: JSON.stringify({ description: trimmed })
       });
       const data = await res.json().catch(() => ({}));
-      
+
       if (res.status === 409) {
         markAsReported(repairId);
         setActiveComplaintId(null);
@@ -173,7 +175,7 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
       const res = await fetch('/api/blockchain/lock', {
         method: 'POST', headers, body: JSON.stringify({ type: 'road', id: repairId, disposition: 'cleared' })
       });
-      
+
       if (res.status === 401 || res.status === 403) {
         const errData = await res.json().catch(() => ({}));
         onAuthError?.(errData.detail || 'Authorization failed (401/403). Only auditors can seal records on-chain.');
@@ -244,10 +246,10 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
           const currentError = complaintErrors[repair.id];
           const currentSuccess = complaintSuccesses[repair.id];
           const hasAlreadyReported = reportedIds.includes(repair.id);
-          
+
           return (
             <div key={repair.id} className="grid grid-cols-1 xl:grid-cols-12 gap-gutter">
-              
+
               {/* Left Column (Slider) */}
               <section className="xl:col-span-8 bg-surface-container-lowest rounded-xl shadow-ambient p-stack-sm border border-outline-variant/30 flex flex-col gap-stack-sm hover:-translate-y-[2px] transition-transform duration-300">
                 <div className="flex justify-between items-center px-2">
@@ -262,7 +264,7 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
                 <div className="flex-1 rounded-lg overflow-hidden border border-outline-variant/20">
                   <BeforeAfterSlider before={repair.before_photo_url} after={repair.after_photo_url} label={repair.location_gps} />
                 </div>
-                
+
                 {/* Metrics */}
                 <div className="grid grid-cols-3 gap-4 pt-2 pb-2 px-2">
                   <div className="flex flex-col gap-1">
@@ -292,13 +294,42 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
               <section className="xl:col-span-4 bg-surface-container-lowest rounded-xl shadow-ambient p-stack-md flex flex-col gap-stack-md border border-outline-variant/30 hover:-translate-y-[2px] transition-transform duration-300">
                 <div className="flex justify-between items-center mb-2">
                   <h4 className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wide font-semibold m-0">SLA Timeline</h4>
-                  <span className="text-[11px] text-secondary font-mono font-medium">Ref: {repair.id}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-secondary font-mono font-medium">Ref: {repair.id}</span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveQrRepairId(activeQrRepairId === repair.id ? null : repair.id)}
+                      className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-primary/80 bg-primary-container/30 hover:bg-primary-container/50 border border-primary/20 px-2 py-0.5 rounded cursor-pointer transition-colors"
+                      title="Show QR Code for Public Reporting"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">qr_code_2</span>
+                      {activeQrRepairId === repair.id ? "Hide QR" : "Show QR"}
+                    </button>
+                  </div>
                 </div>
+
+                {activeQrRepairId === repair.id && (
+                  <div className="bg-surface-container-high border border-outline-variant/40 rounded-lg p-3 mb-2 flex flex-col items-center gap-2">
+                    <div className="bg-white p-2 rounded border border-slate-200 shadow-sm">
+                      <QRCodeSVG
+                        value={`${window.location.origin}/complaint/${repair.id}`}
+                        size={120}
+                        level="M"
+                      />
+                    </div>
+                    <span className="text-[11px] text-secondary font-mono text-center break-all">
+                      {window.location.origin}/complaint/{repair.id}
+                    </span>
+                    <span className="text-[10px] text-on-surface-variant text-center font-medium">
+                      Scan to report an issue for {repair.ward_name} (#{repair.id})
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex-1">
                   <div className="flex flex-col gap-4 relative">
                     <div className="timeline-line" />
-                    
+
                     <div className="timeline-item flex gap-4 relative z-10">
                       <div className="w-10 h-10 rounded-full bg-surface-container-high border-2 border-surface-container-lowest flex items-center justify-center shrink-0">
                         <span className="material-symbols-outlined text-on-surface-variant text-[18px]">build</span>
@@ -308,7 +339,7 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
                         <div className="text-[12px] text-secondary font-medium">{new Date(repair.work_completed_date).toLocaleDateString()}</div>
                       </div>
                     </div>
-                    
+
                     <div className="timeline-item flex gap-4 relative z-10">
                       <div className="w-10 h-10 rounded-full bg-primary-container/20 border-2 border-surface-container-lowest flex items-center justify-center shrink-0">
                         <span className="material-symbols-outlined text-primary text-[18px]">visibility</span>
@@ -409,7 +440,7 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
                       )}
                     </div>
                   )}
-                  
+
                   {sealErrors[repair.id] && (
                     <div className="flex items-center gap-2 bg-error-container text-on-error-container p-3 rounded-lg text-[13px] font-medium mt-3">
                       <span className="material-symbols-outlined text-[18px]">warning</span> {sealErrors[repair.id]}
