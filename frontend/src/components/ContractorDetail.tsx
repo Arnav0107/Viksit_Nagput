@@ -48,43 +48,32 @@ export const ContractorDetail: React.FC<ContractorDetailProps> = ({ contractors,
     const { cx, cy, payload } = props;
     if (payload.flagged) {
       return (
-        <circle cx={cx} cy={cy} r={5} fill="#DC2626" stroke="#fff" strokeWidth={1.5} className="animate-pulse" />
+        <circle cx={cx} cy={cy} r={5} fill="#E11D48" stroke="#fff" strokeWidth={2} className="animate-pulse drop-shadow-[0_0_6px_rgba(225,29,72,0.6)]" />
       );
     }
     return null;
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="flex flex-col w-full text-slate-900">
       {/* Page Header */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
         <div>
-          <h1 className="t-h1">Contractor Performance Audit</h1>
-          <p style={{ fontSize: 14, color: 'var(--color-text-muted)', marginTop: 4 }}>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-1">Contractor Performance Audit</h1>
+          <p className="text-sm text-slate-500 font-medium m-0">
             Municipal Billing & Benchmark Compliance
           </p>
         </div>
         
         {/* Tab switcher */}
-        <div style={{ display: 'flex', gap: 4, background: '#F3F4F6', padding: 4, borderRadius: 8, border: '1px solid var(--color-border)' }}>
+        <div className="inline-flex bg-slate-100 p-1 rounded-xl border border-slate-200">
           {contractors.filter(c => c.type === 'waste').map(c => {
             const isSelected = selectedId === c.id;
             return (
               <button
                 key={c.id}
                 onClick={() => setSelectedId(c.id)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: 6,
-                  fontSize: 13,
-                  fontWeight: isSelected ? 600 : 500,
-                  color: isSelected ? 'var(--color-text-base)' : 'var(--color-text-muted)',
-                  background: isSelected ? 'var(--color-surface)' : 'transparent',
-                  border: 'none',
-                  boxShadow: isSelected ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s'
-                }}
+                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${isSelected ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
               >
                 {c.name.split(' ')[0]} {c.name.split(' ')[1]}
               </button>
@@ -95,58 +84,61 @@ export const ContractorDetail: React.FC<ContractorDetailProps> = ({ contractors,
 
       {/* Metrics Row */}
       {activeContractor && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-          <div className="metric-card">
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-              <div className="metric-icon" style={{ background: '#F3F4F6' }}>
-                <Building size={20} style={{ color: 'var(--color-text-muted)' }} />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-slate-100">
+                <Building size={20} className="text-slate-500" />
               </div>
-              <div style={{ minWidth: 0 }}>
-                <div className="metric-label">Corporate Entity</div>
-                <div className="t-h3" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div className="min-w-0">
+                <div className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1">Corporate Entity</div>
+                <div className="text-2xl font-bold text-slate-900 truncate">
                   {activeContractor.name}
                 </div>
               </div>
             </div>
           </div>
           
-          <div className="metric-card">
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-              <div className="metric-icon" style={{ background: '#DBEAFE' }}>
-                <TrendingUp size={20} style={{ color: '#1E40AF' }} />
+          <div className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-blue-50">
+                <TrendingUp size={20} className="text-blue-600" />
               </div>
               <div>
-                <div className="metric-label">Claimed Billings</div>
-                <div className="metric-value" style={{ fontSize: 24 }}>
+                <div className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1">Claimed Billings</div>
+                <div className="text-2xl font-bold text-slate-900">
                   ₹{(activeContractor.total_claims_inr / 10000000).toFixed(2)} Cr
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="metric-card">
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-              <div className="metric-icon" style={{ background: '#F3F4F6' }}>
-                <TrendingUp size={20} style={{ color: 'var(--color-text-muted)' }} />
+          <div className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-slate-100">
+                <TrendingUp size={20} className="text-slate-500" />
               </div>
               <div>
-                <div className="metric-label">Target Benchmark</div>
-                <div className="metric-value" style={{ fontSize: 24 }}>
-                  {benchmark} <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-muted)' }}>MT/day</span>
+                <div className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1">Target Benchmark</div>
+                <div className="text-2xl font-bold text-slate-900">
+                  {benchmark} <span className="text-sm font-semibold text-slate-500">MT/day</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="metric-card">
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-              <div className="metric-icon" style={{ background: (activeContractor.fraud_flags_confirmed || 0) > 0 ? '#FEE2E2' : '#D1FAE5' }}>
-                <AlertTriangle size={20} style={{ color: (activeContractor.fraud_flags_confirmed || 0) > 0 ? '#DC2626' : '#059669' }} />
+          <div className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+            <div className="flex items-start gap-4">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${(activeContractor.fraud_flags_confirmed || 0) > 0 ? 'bg-red-50' : 'bg-green-50'}`}>
+                <AlertTriangle size={20} className={(activeContractor.fraud_flags_confirmed || 0) > 0 ? 'text-red-600' : 'text-green-600'} />
               </div>
               <div>
-                <div className="metric-label">Confirmed Violations</div>
-                <div className="metric-value" style={{ fontSize: 24, color: (activeContractor.fraud_flags_confirmed || 0) > 0 ? '#DC2626' : '#059669' }}>
+                <div className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1">Confirmed Violations</div>
+                <div className={`text-2xl font-bold flex items-center gap-2 ${(activeContractor.fraud_flags_confirmed || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
                   {activeContractor.fraud_flags_confirmed || 0}
+                  {(activeContractor.fraud_flags_confirmed || 0) === 0 && (
+                    <span className="bg-green-100 text-green-800 border border-green-200 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider">Clear</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -155,49 +147,49 @@ export const ContractorDetail: React.FC<ContractorDetailProps> = ({ contractors,
       )}
 
       {/* Chart */}
-      <div className="card" style={{ padding: '24px' }}>
-        <div style={{ marginBottom: 20 }}>
-          <h2 className="t-h2" style={{ marginBottom: 4 }}>Daily Tonnage Audit (Q2–Q3 2026)</h2>
-          <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: 0 }}>
+      <div className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl p-6 shadow-sm mb-6">
+        <div className="mb-5">
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 mb-1">Daily Tonnage Audit (Q2–Q3 2026)</h2>
+          <p className="text-sm text-slate-500 font-medium m-0">
             Red indicator dots represent anomalous days flagged by geographical trip verification.
           </p>
         </div>
 
         {loading ? (
-          <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>Loading tonnage series...</span>
+          <div className="h-[280px] flex items-center justify-center">
+            <span className="text-sm text-slate-500">Loading tonnage series...</span>
           </div>
         ) : (
-          <div style={{ height: 280 }}>
+          <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="historyGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.12}/>
-                    <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0}/>
+                  <linearGradient id="colorTonnage" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB"/>
-                <XAxis dataKey="date" stroke="#9CA3AF" tickLine={false} style={{ fontSize: 12, fontFamily: 'Inter, sans-serif' }} />
-                <YAxis stroke="#9CA3AF" tickLine={false} style={{ fontSize: 12, fontFamily: 'Inter, sans-serif' }} tickFormatter={(val) => `${val} MT`} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0"/>
+                <XAxis dataKey="date" stroke="#94A3B8" tickLine={false} style={{ fontSize: 12, fontFamily: 'var(--font-sans)' }} />
+                <YAxis stroke="#94A3B8" tickLine={false} style={{ fontSize: 12, fontFamily: 'var(--font-sans)' }} tickFormatter={(val) => `${val} MT`} />
                 <Tooltip 
                   contentStyle={{ 
-                    background: 'var(--color-surface)', 
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 6,
+                    background: '#ffffff', 
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px',
                     fontSize: 12,
-                    fontFamily: 'Inter, sans-serif',
+                    fontFamily: 'var(--font-sans)',
                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                   }} 
                 />
-                <ReferenceLine y={benchmark} stroke="#6B7280" strokeDasharray="4 4" label={{ value: 'Target', position: 'top', fill: '#6B7280', fontSize: 11 }} />
+                <ReferenceLine y={benchmark} stroke="#64748B" strokeDasharray="4 4" label={{ value: 'Target', position: 'top', fill: '#64748B', fontSize: 11, fontFamily: 'var(--font-sans)' }} />
                 <Area 
                   type="monotone" 
                   dataKey="tonnage_mt" 
-                  stroke="var(--color-accent)" 
+                  stroke="#3B82F6" 
                   strokeWidth={2} 
                   fillOpacity={1} 
-                  fill="url(#historyGrad)" 
+                  fill="url(#colorTonnage)" 
                   name="Daily Weight (MT)"
                   dot={<CustomDot />}
                 />
@@ -208,48 +200,49 @@ export const ContractorDetail: React.FC<ContractorDetailProps> = ({ contractors,
       </div>
 
       {/* Data Table */}
-      <div className="card">
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--color-border)' }}>
-          <h2 className="t-h2" style={{ marginBottom: 4 }}>Recent Weighbridge Filings</h2>
-          <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: 0 }}>Latest 10 logs secured on the ledger.</p>
+      <div className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl shadow-sm overflow-hidden mb-6">
+        <div className="p-6 border-b border-slate-200">
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 mb-1">Recent Weighbridge Filings</h2>
+          <p className="text-sm text-slate-500 font-medium m-0">Latest 10 logs secured on the ledger.</p>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table className="data-table">
-            <thead>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-slate-50/80 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
               <tr>
-                <th>Ticket ID</th>
-                <th>Truck ID</th>
-                <th>Filing Time</th>
-                <th>Weight Registered</th>
-                <th>Ledger Status</th>
-                <th>Merkle Hash</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
+                <th className="px-6 py-4">Ticket ID</th>
+                <th className="px-6 py-4">Truck ID</th>
+                <th className="px-6 py-4">Filing Time</th>
+                <th className="px-6 py-4">Weight Registered</th>
+                <th className="px-6 py-4">Ledger Status</th>
+                <th className="px-6 py-4">Merkle Hash</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-200">
               {recentLogs.map((log) => {
                 const isFlagged = log.status === 'flagged';
                 const isReview = log.status === 'under_review';
                 return (
-                  <tr key={log.id}>
-                    <td style={{ fontWeight: 500 }}>{log.id}</td>
-                    <td>{log.truck_id}</td>
-                    <td style={{ color: 'var(--color-text-muted)' }}>{new Date(log.timestamp).toLocaleString()}</td>
-                    <td>{log.weight_kg.toLocaleString()} kg</td>
-                    <td>
-                      {isFlagged && <span className="badge badge-err">GPS Contradiction</span>}
-                      {isReview && <span className="badge badge-warn">ML Outlier</span>}
-                      {!isFlagged && !isReview && <span className="badge badge-ok">Secured</span>}
+                  <tr key={log.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 font-mono font-semibold text-xs text-slate-900">{log.id}</td>
+                    <td className="px-6 py-4 font-mono text-xs text-slate-600">{log.truck_id}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-slate-500">{new Date(log.timestamp).toLocaleString()}</td>
+                    <td className="px-6 py-4 font-mono font-medium text-slate-900">{log.weight_kg.toLocaleString()} kg</td>
+                    <td className="px-6 py-4">
+                      {isFlagged && <span className="bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-0.5 rounded-full text-xs font-semibold">GPS CONTRADICTION</span>}
+                      {isReview && <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full text-xs font-semibold">ML OUTLIER</span>}
+                      {!isFlagged && !isReview && <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-xs font-semibold">SECURED</span>}
                     </td>
-                    <td className="t-mono t-small">
-                      {log.tx_hash ? `${log.tx_hash.slice(0, 10)}...${log.tx_hash.slice(-8)}` : 'Pending'}
+                    <td className="px-6 py-4">
+                      <span className="font-mono text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                        {log.tx_hash ? `${log.tx_hash.slice(0, 10)}...${log.tx_hash.slice(-8)}` : 'Pending'}
+                      </span>
                     </td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td className="px-6 py-4 text-right">
                       <button 
                         onClick={() => onNavigate("flags", log.id)}
-                        className="btn-ghost"
-                        style={{ padding: '4px 10px', fontSize: 12 }}
+                        className="text-xs font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-200 transition-colors cursor-pointer"
                       >
                         Inspect
                       </button>

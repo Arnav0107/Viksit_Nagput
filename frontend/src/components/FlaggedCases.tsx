@@ -147,29 +147,25 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
   const isGPSContradiction = caseDetail?.trip && !caseDetail.trip.passed_dumping_ground;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="flex flex-col gap-6 w-full">
       {/* Header and Selector */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+      <div className="flex flex-wrap justify-between items-center gap-4 bg-surface-container-lowest p-4 md:p-6 rounded-xl border border-outline-variant/30 shadow-ambient">
         <div>
-          <h1 className="t-h1" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <ShieldAlert size={24} style={{ color: 'var(--color-primary)' }} />
+          <h1 className="font-headline-md text-headline-md text-on-surface font-extrabold tracking-tight flex items-center gap-2 m-0">
+            <ShieldAlert size={24} className="text-primary" />
             Evidence Exhibits
           </h1>
-          <p style={{ fontSize: 14, color: 'var(--color-text-muted)', marginTop: 4 }}>
-            Forensic Contract Audit Logs
+          <p className="font-label-sm text-label-sm text-secondary font-medium mt-1 m-0">
+            Forensic Contract Audit Logs & Spatial Verification
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 13, color: 'var(--color-text-muted)', fontWeight: 500 }}>Select Case File:</span>
+        <div className="flex items-center gap-3">
+          <span className="font-label-sm text-label-sm text-secondary font-semibold uppercase tracking-wider">Select Case File:</span>
           <select
             value={selectedCaseId}
             onChange={(e) => setSelectedCaseId(e.target.value)}
-            style={{
-              padding: '8px 12px', borderRadius: 6, border: '1px solid var(--color-border)',
-              background: 'var(--color-surface)', fontSize: 14, color: 'var(--color-text-base)', outline: 'none',
-              maxWidth: 300, cursor: 'pointer'
-            }}
+            className="px-3 py-2 rounded-lg border border-outline-variant/50 bg-surface-container-low font-body-md text-sm text-on-surface outline-none cursor-pointer focus:border-primary font-medium"
           >
             {selectedCaseId && !cases.some(c => c.id === selectedCaseId) && (
               <option value={selectedCaseId}>{selectedCaseId} - Selected Filing</option>
@@ -187,22 +183,22 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
       </div>
 
       {loading && !caseDetail ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 400 }}>
-          <span style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>Loading exhibit data...</span>
+        <div className="flex items-center justify-center h-96 bg-surface-container-lowest rounded-xl border border-outline-variant/30">
+          <span className="font-label-sm text-label-sm text-secondary font-medium">Loading exhibit data...</span>
         </div>
       ) : (
         caseDetail && (
-          <div style={{ display: 'grid', gridTemplateColumns: '5fr 7fr', gap: 24 }}>
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full items-start">
             
-            {/* Left Panel: Detailed Timeline Docket */}
-            <div className="card" style={{ padding: '24px' }}>
-              <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: 16, marginBottom: 20 }}>
-                <div style={{ fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+            {/* Left Panel: Detailed Timeline Docket (5 cols) */}
+            <div className="xl:col-span-5 bg-surface-container-lowest border border-outline-variant/30 rounded-xl shadow-ambient p-6 flex flex-col gap-6">
+              <div className="border-b border-outline-variant/30 pb-4">
+                <div className="text-[11px] text-secondary font-semibold uppercase tracking-wider mb-1">
                   Case Docket
                 </div>
-                <h2 className="t-h2">{caseDetail.log.id}</h2>
-                <div style={{ fontSize: 14, color: 'var(--color-text-base)', marginTop: 4 }}>
-                  Contractor: <span style={{ fontWeight: 600 }}>{caseDetail.log.contractor_name}</span> (Truck: {caseDetail.log.truck_id})
+                <h2 className="font-headline-md text-headline-md text-on-surface font-bold tracking-tight m-0">{caseDetail.log.id}</h2>
+                <div className="text-sm text-on-surface mt-1 font-medium">
+                  Contractor: <span className="font-bold">{caseDetail.log.contractor_name}</span> (Truck: <span className="font-mono">{caseDetail.log.truck_id}</span>)
                 </div>
               </div>
 
@@ -287,7 +283,7 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                           </button>
                         )}
                       </div>
-                      <div className="t-mono" style={{ color: '#D1D5DB', wordBreak: 'break-all', fontSize: 11 }}>
+                      <div className="font-mono text-xs" style={{ color: '#D1D5DB', wordBreak: 'break-all' }}>
                         {caseDetail.log.tx_hash || 'Unsealed / Pending'}
                       </div>
                     </div>
@@ -318,10 +314,10 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                           Auditor Forensic Ruling Required
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                          <button onClick={() => { setActiveRuling('confirmed_fraud'); setRulingNote(''); }} className="btn-danger" style={{ justifyContent: 'center' }}>
+                          <button onClick={() => { setActiveRuling('confirmed_fraud'); setRulingNote(''); }} className="btn-danger font-semibold tracking-wide uppercase" style={{ justifyContent: 'center' }}>
                             Confirm Violation
                           </button>
-                          <button onClick={() => { setActiveRuling('cleared'); setRulingNote(''); }} className="btn-success" style={{ justifyContent: 'center' }}>
+                          <button onClick={() => { setActiveRuling('cleared'); setRulingNote(''); }} className="btn-success font-semibold tracking-wide uppercase" style={{ justifyContent: 'center' }}>
                             Dismiss & Seal
                           </button>
                         </div>
@@ -340,17 +336,17 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                           placeholder="State your forensic ruling justification..."
                           rows={3}
                           disabled={isSubmittingRuling}
-                          style={{ width: '100%', border: '1px solid var(--color-border)', borderRadius: 6, padding: '10px 12px', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none', resize: 'none', marginBottom: 12 }}
+                          style={{ width: '100%', border: '1px solid var(--color-border)', borderRadius: 6, padding: '10px 12px', fontSize: 13, fontFamily: 'var(--font-sans)', outline: 'none', resize: 'none', marginBottom: 12 }}
                         />
                         {rulingError && (
                           <div style={{ fontSize: 12, color: '#DC2626', marginBottom: 12 }}>{rulingError}</div>
                         )}
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-                          <button onClick={() => setActiveRuling(null)} disabled={isSubmittingRuling} className="btn-ghost">Cancel</button>
+                          <button onClick={() => setActiveRuling(null)} disabled={isSubmittingRuling} className="btn-ghost font-semibold">Cancel</button>
                           <button
                             onClick={() => handleExecuteRuling(activeRuling)}
                             disabled={isSubmittingRuling || (activeRuling === 'confirmed_fraud' && !rulingNote.trim())}
-                            className={activeRuling === 'confirmed_fraud' ? 'btn-danger' : 'btn-success'}
+                            className={activeRuling === 'confirmed_fraud' ? 'btn-danger font-semibold' : 'btn-success font-semibold'}
                           >
                             {isSubmittingRuling ? "Sealing..." : "Sign & Seal on Chain"}
                           </button>
@@ -361,7 +357,7 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                 )}
 
                 {role === 'auditor' && isVerified && !caseDetail.log.tx_hash && (
-                  <button onClick={() => handleExecuteRuling('cleared')} disabled={isSubmittingRuling} className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+                  <button onClick={() => handleExecuteRuling('cleared')} disabled={isSubmittingRuling} className="btn-primary font-semibold" style={{ width: '100%', justifyContent: 'center' }}>
                     {isSubmittingRuling ? "Sealing..." : "Cryptographically Seal Record"}
                   </button>
                 )}
@@ -369,7 +365,7 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                 <button
                   onClick={handleVerifyOnChain}
                   disabled={isVerifying || !caseDetail.log.tx_hash}
-                  className="btn-ghost"
+                  className="btn-ghost font-semibold text-xs"
                   style={{ width: '100%', justifyContent: 'center', marginTop: 12 }}
                 >
                   <Key size={14} /> {isVerifying ? "Verifying Merkle Root..." : "Verify Ledger Seal Status"}
@@ -380,45 +376,45 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#065F46', fontWeight: 600, fontSize: 12, marginBottom: 8 }}>
                       <CheckCircle size={14} /> Root Verified (Block #{verificationResult.blockNumber})
                     </div>
-                    <div className="t-mono" style={{ fontSize: 10, color: '#374151', marginBottom: 4 }}>Signer: {verificationResult.sender}</div>
-                    <div className="t-mono" style={{ fontSize: 10, color: '#374151' }}>State Root: {verificationResult.lockedHash}</div>
+                    <div className="font-mono text-xs" style={{ color: '#374151', marginBottom: 4 }}>Signer: {verificationResult.sender}</div>
+                    <div className="font-mono text-xs" style={{ color: '#374151' }}>State Root: {verificationResult.lockedHash}</div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Right Panel: GIS Spatial Intelligence */}
-            <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            {/* Right Panel: GIS Spatial Intelligence (7 cols) */}
+            <div className="xl:col-span-7 bg-surface-container-lowest border border-outline-variant/30 rounded-xl shadow-ambient p-6 flex flex-col">
+              <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h2 className="t-h2">Spatial Trajectory Telemetry</h2>
-                  <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: 0 }}>{caseDetail.trip?.route_name || "GPS Fleet Track Sequence"}</p>
+                  <h2 className="font-headline-md text-headline-md text-on-surface font-bold tracking-tight m-0">Spatial Trajectory Telemetry</h2>
+                  <p className="text-xs text-secondary font-medium mt-1 m-0">{caseDetail.trip?.route_name || "GPS Fleet Track Sequence"}</p>
                 </div>
-                <div className="badge badge-ok">
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#059669', animation: 'pulse 2s infinite' }}></span>
+                <div className="bg-tertiary-fixed text-on-tertiary-fixed px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
                   GIS Active
                 </div>
               </div>
 
-              <div style={{ flex: 1, minHeight: 450, border: '1px solid var(--color-border)', borderRadius: 6, overflow: 'hidden', position: 'relative', isolation: 'isolate', zIndex: 10 }}>
+              <div className="w-full h-[460px] rounded-lg overflow-hidden border border-outline-variant/30 relative isolate z-10">
                 <MapContainer center={mapCenter} zoom={12} style={{ height: '100%', width: '100%' }} zoomControl={false}>
                   <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" attribution='&copy; CARTO' />
                   {nagpurBoundary && <GeoJSON data={nagpurBoundary as any} style={{ color: "#9CA3AF", fillColor: "transparent", weight: 1.5, dashArray: "4, 4" }} />}
                   <CircleMarker center={dumpYardCoords} pathOptions={{ color: "#DC2626", fillColor: "#DC2626", fillOpacity: 0.05, weight: 1.5, dashArray: "4, 4" }} radius={35} />
                   <CircleMarker center={dumpYardCoords} pathOptions={{ color: "#DC2626", fillColor: "#DC2626", fillOpacity: 0.6, weight: 2 }} radius={10}>
-                    <Popup><div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600 }}>Bhandewadi Dump Yard</div></Popup>
-                    <LeafletTooltip permanent direction="top" className="leaflet-tooltip-custom">Bhandewadi Dump Yard</LeafletTooltip>
+                    <Popup><div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600 }}>Bhandewadi Dump Yard</div></Popup>
+                    <LeafletTooltip permanent direction="top" className="leaflet-tooltip-custom font-sans">Bhandewadi Dump Yard</LeafletTooltip>
                   </CircleMarker>
                   <Polyline positions={tripRoute} pathOptions={{ color: isConfirmedFraud || isFlagged ? "#DC2626" : "#059669", weight: 3, dashArray: isConfirmedFraud || isFlagged ? "4, 6" : undefined }} />
                   {startPoint && (
                     <CircleMarker center={startPoint} pathOptions={{ color: "#059669", fillColor: "#059669", fillOpacity: 0.7, weight: 2 }} radius={7}>
-                      <Popup><div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600 }}>Route Origin</div></Popup>
+                      <Popup><div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600 }}>Route Origin</div></Popup>
                     </CircleMarker>
                   )}
                   {endPoint && (
                     <CircleMarker center={endPoint} pathOptions={{ color: isGPSContradiction ? "#DC2626" : "#059669", fillColor: isGPSContradiction ? "#DC2626" : "#059669", fillOpacity: 0.7, weight: 2 }} radius={7}>
-                      <Popup><div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600 }}>{isGPSContradiction ? "Spatial Contradiction point" : "Destination"}</div></Popup>
-                      <LeafletTooltip permanent direction="bottom" className="leaflet-tooltip-custom">{isGPSContradiction ? "SPATIAL ANOMALY" : "DESTINATION"}</LeafletTooltip>
+                      <Popup><div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600 }}>{isGPSContradiction ? "Spatial Contradiction point" : "Destination"}</div></Popup>
+                      <LeafletTooltip permanent direction="bottom" className="leaflet-tooltip-custom font-sans">{isGPSContradiction ? "SPATIAL ANOMALY" : "DESTINATION"}</LeafletTooltip>
                     </CircleMarker>
                   )}
                 </MapContainer>

@@ -37,55 +37,55 @@ export const Web3Console: React.FC<Web3ConsoleProps> = ({ logs, onClear }) => {
     const parts = msg.split(hexRegex);
     return parts.map((part, i) => {
       if (hexRegex.test(part)) {
-        return <span key={i} style={{ color: 'var(--color-primary)', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>{part}</span>;
+        return <span key={i} className="font-mono font-bold text-amber-400">{part}</span>;
       }
-      return <span key={i} style={{ color: defaultColor }}>{part}</span>;
+      return <span key={i} style={{ color: defaultColor }} className="font-mono">{part}</span>;
     });
   };
 
   return (
-    <div className="web3-console">
+    <div className="w-full font-mono text-xs bg-slate-900 text-green-400 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
       
       {/* Console Header Bar */}
       <div 
         onClick={() => setIsOpen(!isOpen)}
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px', cursor: 'pointer', borderBottom: '1px solid #374151', background: isOpen ? '#1F2937' : 'transparent' }}
+        className={`flex justify-between items-center px-4 py-2 cursor-pointer border-b border-slate-700 transition-colors ${isOpen ? 'bg-slate-800' : 'bg-slate-900 hover:bg-slate-800'}`}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Terminal size={14} style={{ color: '#10B981' }} />
-          <span style={{ fontSize: 11, fontWeight: 600, color: '#D1D5DB', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div className="flex items-center gap-2">
+          <Terminal size={14} className="text-green-500" />
+          <span className="font-mono text-xs font-semibold text-slate-300 uppercase tracking-wider">
             AuditChain EVM Console
           </span>
-          <span style={{ background: 'rgba(16,185,129,0.1)', color: '#10B981', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 4, padding: '2px 6px', fontSize: 10, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+          <span className="font-mono text-[10px] font-semibold text-green-400 bg-green-500/10 border border-green-500/20 rounded px-1.5 py-0.5 flex items-center gap-1 ml-2">
             <Cpu size={12} className="animate-spin" />
             RPC: 8545
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div className="flex items-center gap-4">
           <button 
             onClick={(e) => { e.stopPropagation(); onClear(); }}
-            style={{ background: 'none', border: '1px solid #4B5563', borderRadius: 4, padding: '2px 8px', color: '#9CA3AF', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', cursor: 'pointer' }}
+            className="font-mono text-[10px] font-semibold uppercase text-slate-400 hover:text-white border border-slate-600 rounded px-2 py-0.5 bg-transparent cursor-pointer transition-colors"
           >
             Clear logs
           </button>
-          {isOpen ? <ChevronDown size={14} style={{ color: '#9CA3AF' }} /> : <ChevronUp size={14} style={{ color: '#9CA3AF' }} />}
+          {isOpen ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronUp size={14} className="text-slate-400" />}
         </div>
       </div>
 
       {/* Terminal Output */}
       {isOpen && (
-        <div style={{ height: 160, overflowY: 'auto', padding: '12px 16px', fontFamily: "'JetBrains Mono', 'Courier New', monospace", fontSize: 12, backgroundColor: '#111827' }} className="custom-scrollbar">
+        <div className="h-48 max-h-48 overflow-y-auto p-4 bg-slate-900 custom-scrollbar font-mono text-xs leading-relaxed">
           {logs.length === 0 ? (
-            <div style={{ color: '#6B7280', textAlign: 'center', padding: '30px 0' }}>
+            <div className="font-mono text-slate-500 text-center py-7 text-xs">
               Listening for cryptographic ledger transactions. Verify an exhibit or sign a ticket on-chain to trigger logs.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div className="flex flex-col gap-1 font-mono text-xs">
               {logs.map((log, idx) => (
-                <div key={idx} style={{ display: 'flex', gap: 8, lineHeight: 1.5 }}>
-                  <span style={{ color: '#6B7280', flexShrink: 0 }}>[{log.timestamp}]</span>
-                  <span style={{ color: 'var(--color-accent)', fontWeight: 600, flexShrink: 0 }}>[{log.source}]</span>
-                  <span style={{ wordBreak: 'break-all' }}>{parseLogMessage(log.message, getLogStyle(log.type))}</span>
+                <div key={idx} className="flex gap-2 leading-relaxed font-mono">
+                  <span className="text-slate-500 shrink-0 font-mono">[{log.timestamp}]</span>
+                  <span className="text-blue-400 font-bold shrink-0 font-mono">[{log.source}]</span>
+                  <span className="font-mono break-all">{parseLogMessage(log.message, getLogStyle(log.type))}</span>
                 </div>
               ))}
               <div ref={bottomRef} />

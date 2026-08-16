@@ -97,136 +97,132 @@ export const PublicTransparency: React.FC<PublicTransparencyProps> = ({ data: in
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* Header */}
-      <div>
-        <h1 className="t-h1" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FileText size={24} style={{ color: 'var(--color-primary)' }} />
-          Public Transparency Portal
+    <div className="flex flex-col w-full">
+      {/* ── Header ──────────────────────────────────────────────── */}
+      <section className="mb-8 max-w-3xl">
+        <div className="inline-flex items-center gap-2 bg-orange-50 border border-orange-200 px-3 py-1.5 rounded-full w-fit mb-4">
+          <span className="material-symbols-outlined text-[16px] text-orange-600">gavel</span>
+          <span className="text-xs text-orange-700 uppercase tracking-wider font-semibold">Immutable Audit Records</span>
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight mb-6 text-slate-900">
+          Public Ledger
         </h1>
-        <p style={{ fontSize: 14, color: 'var(--color-text-muted)', marginTop: 4 }}>
-          Public Access Channel — Municipal Compliance Record
+        <p className="text-sm text-slate-600 max-w-2xl text-balance">
+          Public Access Channel — Municipal Compliance Record. All weighbridge tickets shown on this portal are cryptographically locked on-chain and cannot be edited.
         </p>
-      </div>
+      </section>
 
-      {/* Inquiry status box */}
-      <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '16px 20px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-        <Scale size={20} style={{ color: '#DC2626', flexShrink: 0, marginTop: 2 }} />
+      {/* ── Alert Banner ──────────────────────────────────────────── */}
+      <div className="bg-error-container/40 border border-error-container rounded-lg px-4 py-3 flex gap-3 items-start shadow-sm">
+        <span className="material-symbols-outlined text-error mt-0.5">warning</span>
         <div>
-          <div style={{ fontWeight: 600, fontSize: 14, color: '#991B1B', marginBottom: 6 }}>
+          <div className="font-label-bold text-label-bold text-on-error-container mb-1">
             Active Forensic Inquiry: IN PROGRESS
           </div>
-          <p style={{ fontSize: 13, color: '#7F1D1D', lineHeight: 1.6, margin: 0 }}>
+          <p className="font-body-md text-body-md text-on-error-container/80 leading-relaxed m-0">
             The Nagpur Municipal Corporation has ordered a formal inquiry into waste collection invoicing from April–July 2026. 
-            AuditChain provides tamper-proof blockchain evidence logs to investigation committees. 
-            All weighbridge tickets shown on this portal are cryptographically locked on-chain and cannot be edited.
+            AuditChain provides tamper-proof blockchain evidence logs to investigation committees.
           </p>
         </div>
       </div>
 
-      {/* Contractor Compliance Leaderboard */}
-      <div className="card" style={{ padding: '0 24px' }}>
-        <h2 className="t-h2" style={{ padding: '24px 0 16px 0', margin: 0, borderBottom: '1px solid var(--color-border)' }}>
-          Contractor Compliance Leaderboard
-        </h2>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {!overviewData ? (
-            // Skeleton Loader
-            [1, 2].map((i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '16px 0', borderBottom: i === 1 ? '1px solid var(--color-border)' : 'none', animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}>
-                <div style={{ width: 32, height: 20, background: '#F3F4F6', borderRadius: 4, flexShrink: 0 }} />
-                <div style={{ flex: 1, paddingRight: 24, marginLeft: 8 }}>
-                  <div style={{ height: 20, width: '40%', background: '#E5E7EB', borderRadius: 4, marginBottom: 6 }} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ flex: 1, height: 8, background: '#F3F4F6', borderRadius: 4 }} />
-                    <div style={{ width: 40, height: 16, background: '#F3F4F6', borderRadius: 4 }} />
-                  </div>
-                </div>
-                <div style={{ width: 48, height: 32, background: '#E5E7EB', borderRadius: 4, flexShrink: 0 }} />
-              </div>
-            ))
-          ) : (
-            contractors.map((c: any, index: number) => {
-              const rating = getGrade(c);
-              const fraudCount = c.fraud_flags_confirmed || 0;
-              const complianceScore = fraudCount === 0 ? 98 : fraudCount === 1 ? 65 : 32;
+      {/* ── Contractor Compliance Leaderboard ─────────────────────── */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 overflow-hidden w-full">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-slate-900 m-0">Contractor Compliance Leaderboard</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-sm text-slate-600">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3">Rank</th>
+                <th className="text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3">Contractor</th>
+                <th className="text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3 w-1/3">Compliance Score</th>
+                <th className="text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-3 text-right">Grade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!overviewData ? (
+                // Skeleton Loader
+                [1, 2].map((i) => (
+                  <tr key={i} className="border-b border-outline-variant/30 animate-pulse">
+                    <td className="py-4 px-4"><div className="w-8 h-5 bg-surface-container-high rounded" /></td>
+                    <td className="py-4 px-4"><div className="w-32 h-5 bg-surface-container-high rounded" /></td>
+                    <td className="py-4 px-4"><div className="w-full h-3 bg-surface-container-high rounded" /></td>
+                    <td className="py-4 px-4 text-right"><div className="w-10 h-8 bg-surface-container-high rounded ml-auto" /></td>
+                  </tr>
+                ))
+              ) : (
+                contractors.map((c: any, index: number) => {
+                  const rating = getGrade(c);
+                  const fraudCount = c.fraud_flags_confirmed || 0;
+                  const complianceScore = fraudCount === 0 ? 98 : fraudCount === 1 ? 65 : 32;
 
-              return (
-                <div key={c.id} style={{ display: 'flex', alignItems: 'center', padding: '16px 0', borderBottom: index < contractors.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-muted)', width: 32, flexShrink: 0 }}>
-                    #{index + 1}
-                  </div>
-                  <div style={{ flex: 1, paddingRight: 24 }}>
-                    <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--color-text-base)', marginBottom: 6 }}>
-                      {c.name}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ flex: 1, height: 8, background: '#F3F4F6', borderRadius: 4, overflow: 'hidden' }}>
-                        <div style={{ width: `${complianceScore}%`, height: '100%', background: rating.color, borderRadius: 4 }} />
-                      </div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', width: 40 }}>
-                        {complianceScore}%
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 32, fontWeight: 700, color: rating.color, width: 48, textAlign: 'right', flexShrink: 0 }}>
-                    {rating.grade}
-                  </div>
-                </div>
-              );
-            })
-          )}
+                  return (
+                    <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-3 align-middle text-slate-500 font-bold text-base">#{index + 1}</td>
+                      <td className="py-3 px-3 align-middle font-bold text-slate-900 tracking-tight">{c.name}</td>
+                      <td className="py-3 px-3 align-middle">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${complianceScore}%`, backgroundColor: rating.color }} />
+                          </div>
+                          <span className="text-slate-500 font-bold text-sm w-10 font-mono">{complianceScore}%</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 align-middle text-right text-3xl font-extrabold tracking-tight" style={{ color: rating.color }}>{rating.grade}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '7fr 5fr', gap: 24 }}>
-        {/* Sealed Records Audit Chronology */}
-        <div className="card">
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* ── Chronology & Sealed Records (Grid) ──────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Sealed Records Audit Chronology (7 cols) */}
+        <div className="lg:col-span-7 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col mb-6">
+          <div className="p-6 border-b border-slate-200 flex justify-between items-center">
             <div>
-              <h2 className="t-h2" style={{ marginBottom: 4 }}>Immutable On-Chain Audit Chronology</h2>
-              <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: 0 }}>
-                Recently sealed weighbridge and road restoration exhibits on EVM
-              </p>
+              <h2 className="text-xl font-semibold text-slate-900 m-0 mb-1">Immutable On-Chain Audit</h2>
+              <p className="text-sm text-slate-500 font-medium m-0">Recently sealed exhibits on EVM</p>
             </div>
-            <button onClick={fetchSealedRecords} disabled={loadingRecords} className="btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}>
-              <RefreshCw size={14} className={loadingRecords ? "animate-spin" : ""} />
+            <button onClick={fetchSealedRecords} disabled={loadingRecords} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-slate-100 transition-colors text-xs font-semibold tracking-wide text-slate-600 cursor-pointer border border-slate-200 uppercase">
+              <span className={`material-symbols-outlined text-[16px] ${loadingRecords ? "animate-spin" : ""}`}>refresh</span>
               Refresh
             </button>
           </div>
 
-          <div style={{ padding: '0 24px' }}>
+          <div className="p-stack-sm flex-1">
             {loadingRecords ? (
-              <div style={{ padding: '40px 0', textAlign: 'center', fontSize: 13, color: 'var(--color-text-muted)' }}>
-                Querying Smart Contract Event Logs...
-              </div>
+              <div className="py-10 text-center font-label-sm text-secondary font-medium">Querying Smart Contract Event Logs...</div>
             ) : sealedRecords.length === 0 ? (
-              <div style={{ padding: '40px 0', textAlign: 'center', fontSize: 13, color: 'var(--color-text-muted)' }}>
-                No sealed blockchain exhibits registered yet.
-              </div>
+              <div className="py-10 text-center font-label-sm text-secondary font-medium">No sealed blockchain exhibits registered yet.</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div className="flex flex-col">
                 {sealedRecords.slice(0, 8).map((rec: any, idx: number) => {
                   const isFraud = rec.status === 'confirmed_fraud';
-                  const isCleared = rec.status === 'cleared' || rec.status === 'verified';
                   return (
-                    <div key={idx} style={{ padding: '16px 0', borderBottom: idx < 7 ? '1px solid var(--color-border)' : 'none', display: 'flex', justifyContent: 'space-between', gap: 16 }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                          {isFraud ? <ShieldAlert size={15} style={{ color: '#DC2626' }} /> : <CheckCircle size={15} style={{ color: '#059669' }} />}
-                          <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-text-base)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{rec.title}</span>
-                          <span className={isFraud ? 'badge badge-err' : 'badge badge-ok'} style={{ padding: '1px 6px', fontSize: 10 }}>
+                    <div key={idx} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg mb-3 bg-white">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`material-symbols-outlined text-[16px] ${isFraud ? 'text-red-600' : 'text-orange-600'}`}>{isFraud ? 'gavel' : 'verified'}</span>
+                          <span className="text-sm font-bold text-slate-900 truncate">{rec.title}</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${isFraud ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'}`}>
                             {rec.status}
                           </span>
                         </div>
-                        <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: 0, paddingLeft: 23 }}>{rec.note}</p>
+                        <p className="text-xs text-slate-500 font-medium m-0 ml-6">{rec.note}</p>
                       </div>
 
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>
+                      <div className="text-right shrink-0">
+                        <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 font-semibold">
                           {new Date(rec.timestamp).toLocaleDateString()}
                         </div>
-                        <div className="t-mono" style={{ fontSize: 10, color: '#059669', width: 140, overflow: 'hidden', textOverflow: 'ellipsis' }} title={rec.tx_hash}>
+                        <div className="font-mono text-xs text-green-600 w-32 truncate" title={rec.tx_hash}>
                           Tx: {rec.tx_hash}
                         </div>
                       </div>
@@ -238,20 +234,24 @@ export const PublicTransparency: React.FC<PublicTransparencyProps> = ({ data: in
           </div>
         </div>
 
-        {/* Historical Chronology timeline */}
-        <div className="card" style={{ padding: '24px' }}>
-          <h2 className="t-h2" style={{ paddingBottom: 16, borderBottom: '1px solid var(--color-border)', marginBottom: 20 }}>
+        {/* Historical Chronology timeline (5 cols) */}
+        <div className="lg:col-span-5 bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col gap-6">
+          <h2 className="text-xl text-slate-900 font-semibold m-0 border-b border-slate-200 pb-4">
             Inquiry Chronology (2026)
           </h2>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0, paddingLeft: 8 }}>
+          <div className="flex flex-col relative pt-2">
+            <div className="absolute left-[19px] top-4 bottom-4 w-[2px] bg-slate-200" />
+            
             {timelineEvents.map((event, idx) => (
-              <div key={idx} className="timeline-step" style={{ paddingBottom: idx < timelineEvents.length - 1 ? 24 : 0 }}>
-                <div className="timeline-dot" style={{ background: '#FEE2E2', color: '#DC2626' }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{event.date}</div>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-text-base)', marginBottom: 4 }}>{event.title}</div>
-                  <div style={{ fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 1.5 }}>{event.desc}</div>
+              <div key={idx} className={`flex gap-4 relative z-10 ${idx < timelineEvents.length - 1 ? 'pb-6' : ''}`}>
+                <div className="w-10 h-10 rounded-full bg-red-50 border-2 border-white flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-red-600 text-[18px]">adjust</span>
+                </div>
+                <div className="pt-2">
+                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{event.date}</div>
+                  <div className="font-bold text-slate-900 mb-1">{event.title}</div>
+                  <div className="text-sm text-slate-600 font-medium leading-relaxed">{event.desc}</div>
                 </div>
               </div>
             ))}

@@ -6,10 +6,6 @@ import { RoadRepairs } from './components/RoadRepairs';
 import { PublicTransparency } from './components/PublicTransparency';
 import { Login } from './components/Login';
 import { Web3Console } from './components/Web3Console';
-import {
-  LayoutDashboard, Building, BookOpen, FileSpreadsheet, ShieldAlert,
-  LogOut, LogIn, AlertCircle, Search, Flag, RefreshCw, ChevronRight, User, Menu
-} from 'lucide-react';
 
 interface ConsoleLog {
   timestamp: string;
@@ -42,6 +38,7 @@ function App() {
   const [theme] = useState<'light' | 'dark'>('light');
   const [consoleLogs, setConsoleLogs] = useState<ConsoleLog[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [premiumVibe, setPremiumVibe] = useState<boolean>(false);
 
   const pushWeb3Log = (source: string, message: string, type: 'info' | 'success' | 'warn' | 'hex' = 'info') => {
     const timestamp = new Date().toLocaleTimeString();
@@ -165,13 +162,13 @@ function App() {
   /* ── Nav Items ─────────────────────────────────────────────────── */
   const navItems = [
     ...(role !== 'public' ? [
-      { view: 'overview',     icon: LayoutDashboard, label: 'Dashboard' },
-      { view: 'contractors',  icon: Building,        label: 'Contractor Audit' },
-      { view: 'flags',        icon: ShieldAlert,     label: 'Evidence Exhibits',
+      { view: 'overview',     icon: 'dashboard',   label: 'Dashboard' },
+      { view: 'contractors',  icon: 'domain',      label: 'Contractor Audit' },
+      { view: 'flags',        icon: 'gavel',       label: 'Evidence Exhibits',
         badge: overviewData?.summary?.flagged_weighs > 0 ? overviewData.summary.flagged_weighs : undefined },
     ] : []),
-    { view: 'repairs',      icon: FileSpreadsheet, label: 'Road SLA Tracker' },
-    { view: 'transparency', icon: BookOpen,         label: 'Public Ledger' },
+    { view: 'repairs',      icon: 'construction', label: 'Road SLA Tracker' },
+    { view: 'transparency', icon: 'description',  label: 'Public Ledger' },
   ];
 
   const roleColors: Record<string, string> = {
@@ -181,178 +178,162 @@ function App() {
   };
 
   return (
-    <div style={{ background: 'var(--color-bg)', minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="flex flex-col h-screen w-full text-slate-900 overflow-hidden font-sans bg-[url('https://img.magnific.com/premium-photo/high-angle-view-modern-buildings-city-against-clear-sky_1623070-169.jpg?semt=ais_test_b&w=740&q=80')] bg-cover bg-center bg-no-repeat bg-fixed relative">
+      
+      {/* Gradient overlay so the image fades to solid white/slate at the bottom for readability */}
+      <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-b from-white/60 via-slate-50/90 to-slate-50"></div>
 
-      {isMobileMenuOpen && (
-        <div className="mobile-backdrop" onClick={() => setIsMobileMenuOpen(false)} />
-      )}
-
-      {/* ── Fixed Sidebar ──────────────────────────────────────────── */}
-      <aside className={`sidebar ${isMobileMenuOpen ? 'sidebar-open' : ''}`}>
-        {/* Logo */}
-        <div style={{ padding: '18px 16px 14px', borderBottom: '1px solid var(--color-border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, background: 'var(--color-primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Flag size={16} color="#fff" />
-            </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-base)', lineHeight: 1.2 }}>AuditChain</div>
-              <div style={{ fontSize: 11, color: 'var(--color-text-muted)', lineHeight: 1.2 }}>Nagpur Municipal</div>
+      {/* ── TopNavBar (Fixed Header) ────────────────────────────── */}
+      <header className="relative z-10 w-full h-16 shrink-0 bg-white/80 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
+        <div className="flex justify-between items-center h-full px-4 md:px-8 mx-auto">
+          {/* Mobile Menu Toggle & Brand */}
+          <div className="flex items-center gap-3">
+            <button 
+              className="md:hidden p-2 rounded hover:bg-slate-100 transition-colors text-primary cursor-pointer"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              <span className="material-symbols-outlined text-[24px]">menu</span>
+            </button>
+            <div className="text-xl text-primary font-bold tracking-tight truncate max-w-[200px] md:max-w-none">
+              AuditChain Nagpur
             </div>
           </div>
-        </div>
 
-        {/* Nav */}
-        <nav style={{ padding: '12px 10px', flex: 1, overflowY: 'auto' }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 6px 8px' }}>
-            Navigation
+          {/* Desktop Nav Links */}
+          <div className="hidden md:flex space-x-6 items-center h-full">
+            <button onClick={() => navigateToView('overview')} className={`font-semibold text-sm h-full flex items-center transition-colors duration-200 tracking-tight cursor-pointer ${currentView === 'overview' ? 'text-primary border-b-2 border-primary' : 'text-slate-500 hover:text-slate-900'}`}>Home</button>
+            <button onClick={() => navigateToView('repairs')} className={`font-semibold text-sm h-full flex items-center transition-colors duration-200 tracking-tight cursor-pointer ${currentView === 'repairs' ? 'text-primary border-b-2 border-primary' : 'text-slate-500 hover:text-slate-900'}`}>Road Repairs</button>
+            <button onClick={() => navigateToView('transparency')} className={`font-semibold text-sm h-full flex items-center transition-colors duration-200 tracking-tight cursor-pointer ${currentView === 'transparency' ? 'text-primary border-b-2 border-primary' : 'text-slate-500 hover:text-slate-900'}`}>Public Ledger</button>
           </div>
-          {navItems.map(item => {
-            const Icon = item.icon;
-            const isActive = currentView === item.view;
-            return (
-              <button
-                key={item.view}
-                onClick={() => navigateToView(item.view)}
-                className={`sidebar-nav-item${isActive ? ' active' : ''}`}
-              >
-                <Icon size={16} style={{ flexShrink: 0 }} />
-                <span style={{ flex: 1 }}>{item.label}</span>
-                {(item as any).badge && (
-                  <span style={{ background: '#FEE2E2', color: '#991B1B', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 9999 }}>
-                    {(item as any).badge}
-                  </span>
-                )}
+
+          {/* Actions */}
+          <div className="flex items-center gap-3">
+            {inlineNotice && (
+              <div className="hidden md:flex items-center gap-2 bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase">
+                <span className="material-symbols-outlined text-[16px]">error</span>
+                <span>{inlineNotice}</span>
+              </div>
+            )}
+            {role === 'auditor' && (
+              <button onClick={handleTriggerReseed} className="hover:bg-slate-100 transition-colors duration-200 p-2 rounded-full active:scale-95 flex items-center justify-center text-slate-700 cursor-pointer" title="Reset Ledger">
+                <span className="material-symbols-outlined text-[22px]">restart_alt</span>
               </button>
-            );
-          })}
-        </nav>
-
-        {/* Sidebar footer – user profile */}
-        <div style={{ borderTop: '1px solid var(--color-border)', padding: '12px 14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#F3F4F6', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <User size={14} style={{ color: 'var(--color-text-muted)' }} />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-base)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {displayName || username || 'User'}
-              </div>
-              <div style={{ fontSize: 11, color: role ? roleColors[role] || 'var(--color-text-muted)' : 'var(--color-text-muted)', fontWeight: 500, textTransform: 'capitalize' }}>
-                {role || 'Guest'}
-              </div>
-            </div>
+            )}
+            <button onClick={() => handleLogout()} className="hover:bg-slate-100 transition-colors duration-200 p-2 rounded-full active:scale-95 flex items-center justify-center text-slate-700 cursor-pointer" title="Sign Out">
+              <span className="material-symbols-outlined text-[22px]">logout</span>
+            </button>
           </div>
-          {token ? (
-            <button
-              onClick={() => handleLogout()}
-              className="btn-ghost"
-              style={{ width: '100%', justifyContent: 'center', fontSize: 12 }}
-            >
-              <LogOut size={13} /> Sign Out
-            </button>
-          ) : (
-            <button
-              onClick={() => handleLogout()}
-              className="btn-ghost"
-              style={{ width: '100%', justifyContent: 'center', fontSize: 12 }}
-            >
-              <LogIn size={13} /> Sign In
-            </button>
-          )}
-        </div>
-      </aside>
-
-      {/* ── Fixed Top Header ───────────────────────────────────────── */}
-      <header className="top-header">
-        {/* Breadcrumb / Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-          <button 
-            className="md:hidden" 
-            onClick={() => setIsMobileMenuOpen(true)}
-            style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--color-text-base)' }}
-          >
-            <Menu size={18} />
-          </button>
-          <span style={{ fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 500, display: 'none', '@media (min-width: 640px)': { display: 'inline' } } as any}>NMC</span>
-          <ChevronRight size={14} style={{ color: 'var(--color-text-muted)', flexShrink: 0, display: 'none', '@media (min-width: 640px)': { display: 'block' } } as any} />
-          <h1 className="t-h1" style={{ margin: 0, fontSize: 18, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {PAGE_TITLES[currentView] || 'AuditChain'}
-          </h1>
-        </div>
-
-        {/* Search Bar (center) */}
-        <div style={{ flex: 1, maxWidth: 360, position: 'relative', margin: '0 auto' }}>
-          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF', pointerEvents: 'none' }} />
-          <input
-            type="text"
-            placeholder="Search cases, wards, contractors…"
-            className="search-input"
-          />
-        </div>
-
-        {/* Right Side */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
-          {/* RBAC Notice */}
-          {inlineNotice && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 6, padding: '5px 10px', fontSize: 12, color: '#991B1B', fontWeight: 500 }}>
-              <AlertCircle size={13} />
-              <span style={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inlineNotice}</span>
-              <button onClick={() => setInlineNotice(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991B1B', fontWeight: 700, marginLeft: 4, padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
-            </div>
-          )}
-
-          {/* Reseed for Auditor */}
-          {role === 'auditor' && (
-            <button onClick={handleTriggerReseed} className="btn-ghost" style={{ fontSize: 12 }}>
-              <RefreshCw size={13} /> Reset Ledger
-            </button>
-          )}
-
-          {/* Report Issue CTA */}
-          <button onClick={() => navigateToView('repairs')} className="btn-primary" style={{ fontSize: 13 }}>
-            <Flag size={13} /> Report Issue
-          </button>
         </div>
       </header>
 
-      {/* ── Main Content ───────────────────────────────────────────── */}
-      <main className="main-content" style={{ paddingBottom: 220 }}>
-        <div className="content-container">
+      {/* ── Main Layout Body ───────────────────────────────────── */}
+      <div className="flex flex-1 w-full overflow-hidden relative">
+        
+        {/* Mobile Sidebar Overlay */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsMobileMenuOpen(false)} />
+        )}
 
-          {currentView === 'overview' && (
-            <Overview data={overviewData} loading={loading} onNavigate={navigateToView} />
-          )}
-          {currentView === 'contractors' && (
-            <ContractorDetail contractors={contractors} onNavigate={navigateToView} />
-          )}
-          {currentView === 'flags' && (
-            <FlaggedCases
-              initialCaseId={selectedFlagCaseId}
-              role={role || 'public'}
-              token={token}
-              onAuthError={handleAuthError}
-              onPushWeb3Log={pushWeb3Log}
-            />
-          )}
-          {currentView === 'repairs' && (
-            <RoadRepairs
-              role={role || 'public'}
-              token={token}
-              onAuthError={handleAuthError}
-              onPushWeb3Log={pushWeb3Log}
-            />
-          )}
-          {currentView === 'transparency' && (
-            <PublicTransparency data={overviewData} />
-          )}
+        {/* Sidebar */}
+        <aside className={`${isMobileMenuOpen ? 'fixed inset-y-0 left-0 z-50 flex shadow-2xl' : 'hidden'} md:flex flex-col w-64 shrink-0 p-4 transition-transform overflow-y-auto relative ${premiumVibe ? 'bg-slate-950 text-slate-200 border-r border-slate-800' : 'bg-white text-slate-900 border-r border-slate-200'}`}>
+          
+          {/* --- TRADITIONAL NAGPUR WATERMARK --- */}
+          <div 
+            className="absolute inset-x-0 bottom-0 h-[80%] pointer-events-none z-0 opacity-40 bg-bottom bg-no-repeat bg-contain"
+            style={{ 
+              backgroundImage: "url('/deekshabhoomi.svg')",
+              WebkitMaskImage: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)",
+              maskImage: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)"
+            }}
+          />
 
-        </div>
-      </main>
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="mb-6 flex justify-between items-start">
+              <div>
+                <h2 className={`text-sm font-bold tracking-tight ${premiumVibe ? 'text-slate-200' : 'text-slate-900'}`}>Citizen Portal</h2>
+                <p className={`text-xs font-medium ${premiumVibe ? 'text-slate-500' : 'text-slate-500'}`}>Nagpur Transparency</p>
+              </div>
+              <button className="md:hidden text-slate-400 p-1 cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <nav className="flex flex-col gap-1.5 flex-1 overflow-y-auto hide-scrollbar">
+              {navItems.map(item => {
+                const isActive = currentView === item.view;
+                return (
+                  <button
+                    key={item.view}
+                    onClick={() => navigateToView(item.view)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors cursor-pointer w-full text-left ${isActive ? (premiumVibe ? 'text-orange-400 bg-slate-800/60 font-bold' : 'text-primary font-bold bg-orange-50') : (premiumVibe ? 'text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 transition-colors' : 'text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors')}`}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}>{item.icon}</span>
+                    <span className="text-sm flex-1">{item.label}</span>
+                    {(item as any).badge && (
+                      <span className="bg-red-100 text-red-800 text-[10px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full font-mono">
+                        {(item as any).badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div className={`mt-auto pt-4 border-t flex flex-col gap-4 ${premiumVibe ? 'border-slate-800' : 'border-slate-200'}`}>
+              <div className="flex items-center gap-3 px-1">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${premiumVibe ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                  <span className="material-symbols-outlined text-[18px]">person</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-xs font-semibold truncate m-0 ${premiumVibe ? 'text-slate-200' : 'text-slate-900'}`}>Public Auditor</p>
+                  <p className={`text-[10px] truncate m-0 ${premiumVibe ? 'text-slate-500' : 'text-slate-500'}`}>Read-Only Access</p>
+                </div>
+              </div>
+              <button onClick={() => navigateToView('repairs')} className="w-full bg-orange-500 text-white font-bold tracking-wide uppercase text-sm py-3 rounded-lg hover:-translate-y-[2px] transition-transform shadow-sm flex justify-center items-center gap-2 cursor-pointer">
+                <span className="material-symbols-outlined text-[20px]">add_circle</span>
+                <span>Report Issue</span>
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Scrollable Content Area */}
+        <main className="relative z-10 flex-1 overflow-y-auto p-6">
+          <div className="max-w-7xl mx-auto space-y-6 w-full">
+            {currentView === 'overview' && (
+              <Overview data={overviewData} loading={loading} onNavigate={navigateToView} premiumVibe={premiumVibe} />
+            )}
+            {currentView === 'contractors' && (
+              <ContractorDetail contractors={contractors} onNavigate={navigateToView} />
+            )}
+            {currentView === 'flags' && (
+              <FlaggedCases
+                initialCaseId={selectedFlagCaseId}
+                role={role || 'public'}
+                token={token}
+                onAuthError={handleAuthError}
+                onPushWeb3Log={pushWeb3Log}
+              />
+            )}
+            {currentView === 'repairs' && (
+              <RoadRepairs
+                role={role || 'public'}
+                token={token}
+                onAuthError={handleAuthError}
+                onPushWeb3Log={pushWeb3Log}
+              />
+            )}
+            {currentView === 'transparency' && (
+              <PublicTransparency data={overviewData} />
+            )}
+          </div>
+        </main>
+      </div>
 
       {/* ── Web3 Console ──────────────────────────────────────────── */}
-      <Web3Console logs={consoleLogs} onClear={() => setConsoleLogs([])} />
-
+      <footer className="relative z-20 shrink-0">
+        <Web3Console logs={consoleLogs} onClear={() => setConsoleLogs([])} />
+      </footer>
     </div>
   );
 }
