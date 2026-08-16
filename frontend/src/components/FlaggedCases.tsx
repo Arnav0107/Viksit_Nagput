@@ -80,17 +80,29 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
   }, [selectedCaseId]);
 
   const handleVerifyOnChain = async () => {
-    if (!caseDetail) return;
+    if (!caseDetail || !caseDetail.log.tx_hash) return;
     setIsVerifying(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsVerifying(false);
-    setVerificationResult({
-      success: true,
-      blockNumber: Math.floor(Math.random() * 200000) + 14820000,
-      timestamp: new Date().toISOString(),
-      sender: "0x3f5CEeE50E72C002fD2A32152861c89078c5C7a3",
-      lockedHash: caseDetail.log.tx_hash
-    });
+    try {
+      const res = await fetch(`/api/blockchain/verify/${caseDetail.log.tx_hash}`);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Failed to query the blockchain node.");
+      }
+      const data = await res.json();
+      setVerificationResult(data);
+    } catch (err: any) {
+      console.error(err);
+      setVerificationResult({
+        success: false,
+        blockNumber: 0,
+        sender: "UNVERIFIED",
+        lockedHash: caseDetail.log.tx_hash,
+        integrity_match: false,
+        mismatches: [err.message || "Failed to query the blockchain node."]
+      });
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   const handleExecuteRuling = async (dispositionType: 'confirmed_fraud' | 'cleared') => {
@@ -499,6 +511,21 @@ export const FlaggedCases: React.FC<FlaggedCasesProps> = ({ initialCaseId, role,
                     </div>
                     <p className="text-dossier-muted truncate font-bold">Contract Signer: {verificationResult.sender}</p>
                     <p className="text-dossier-muted truncate font-bold">State Root: {verificationResult.lockedHash}</p>
+                    {verificationResult.integrity_match !== undefined && (
+                      <div className={`mt-2 p-1.5 border font-bold uppercase rounded ${verificationResult.integrity_match ? 'bg-status-verified/10 text-status-verified border-status-verified/30' : 'bg-status-flagged/10 text-status-flagged border-status-flagged/30'}`}>
+                        Integrity check: {verificationResult.integrity_match ? 'PASSED (Cryptographic Seal Match)' : 'FAILED (Local DB Divergence Detected!)'}
+                      </div>
+                    )}
+                    {verificationResult.mismatches && verificationResult.mismatches.length > 0 && (
+                      <div className="mt-1 text-status-flagged font-bold">
+                        Mismatches:
+                        <ul className="list-disc pl-3 mt-0.5 space-y-0.5 normal-case font-normal text-dossier-muted">
+                          {verificationResult.mismatches.map((m: string, idx: number) => (
+                            <li key={idx}>{m}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

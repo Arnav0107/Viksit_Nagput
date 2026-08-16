@@ -50,6 +50,26 @@ COMPLAINT_FINGERPRINTS: Set[str] = set()
 @app.on_event("startup")
 def startup_event():
     init_db()
+    
+    # Blockchain startup health-check
+    try:
+        from app.blockchain import get_web3_client
+        w3, contract, account = get_web3_client()
+        address = contract.address
+        bytecode = w3.eth.get_code(address)
+        if not bytecode or bytecode == b'\x00' or bytecode == b'' or bytecode.hex() in ["0x", ""]:
+            raise Exception(f"Contract address {address} has no deployed bytecode on the local blockchain.")
+        print(f"[OK] Blockchain Health Check PASSED: Contract verified at {address}")
+    except Exception as e:
+        print("\n" + "!" * 80)
+        print(" [FATAL BLOCKCHAIN ERROR] startup health-check failed!")
+        print(f" Error: {str(e)}")
+        print(" Please ensure Anvil is running and smart contracts are deployed.")
+        print(" Run: powershell -ExecutionPolicy Bypass -File scripts/setup_blockchain.ps1")
+        print("!" * 80 + "\n")
+        import sys
+        sys.exit(1)
+
     print("\n" + "=" * 68)
     print(" [NMC] AuditChain Nagpur - Demo Login Credentials (RBAC Enabled)")
     print("=" * 68)
@@ -77,15 +97,80 @@ def login_endpoint(payload: LoginRequest):
         "display_name": user.get("display_name", user["username"])
     }
 
+def deploy_contract_on_chain():
+    import os
+    import subprocess
+    import re
+    from pathlib import Path
+
+    user_profile = os.environ.get("USERPROFILE") or os.environ.get("HOME")
+    forge_path = "forge"
+    if user_profile:
+        foundry_bin = Path(user_profile) / ".foundry" / "bin" / "forge"
+        if os.name == 'nt':
+            foundry_bin = foundry_bin.with_suffix('.exe')
+        if foundry_bin.exists():
+            forge_path = str(foundry_bin)
+
+    project_root = Path(__file__).resolve().parent.parent.parent
+    contracts_dir = project_root / "contracts"
+    
+    cmd = [
+        forge_path,
+        "create",
+        "src/AuditChain.sol:AuditChain",
+        "--rpc-url", "http://127.0.0.1:8545",
+        "--private-key", "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+        "--broadcast"
+    ]
+    
+    result = subprocess.run(cmd, cwd=str(contracts_dir), capture_output=True, text=True)
+    if result.returncode != 0:
+        raise Exception(f"Forge contract deployment failed: {result.stderr}")
+        
+    match = re.search(r"Deployed to:\s*(0x[0-9a-fA-F]{40})", result.stdout)
+    if not match:
+        raise Exception(f"Could not parse deployed contract address from forge output: {result.stdout}")
+        
+    new_address = match.group(1)
+    
+    env_path = project_root / "backend" / ".env"
+    if env_path.exists():
+        with open(env_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        
+        updated = False
+        for i, line in enumerate(lines):
+            if line.startswith("CONTRACT_ADDRESS="):
+                lines[i] = f"CONTRACT_ADDRESS={new_address}\n"
+                updated = True
+                break
+        if not updated:
+            lines.append(f"CONTRACT_ADDRESS={new_address}\n")
+            
+        with open(env_path, "w", encoding="utf-8") as f:
+            f.writelines(lines)
+            
+    os.environ["CONTRACT_ADDRESS"] = new_address
+    return new_address
+
 @app.post("/api/admin/reseed")
 def reseed_database(
     db: Session = Depends(get_db),
     current_user: dict = Depends(require_role("auditor"))
 ):
-    """Reseeds the database to standard starting state for demo purposes (Auditor only)."""
+    """Reseeds the database and redeploys the smart contract fresh on the local blockchain (Auditor only)."""
+    try:
+        new_address = deploy_contract_on_chain()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to redeploy smart contract: {str(e)}"
+        )
+        
     from app.seed import seed_data
     seed_data(db)
-    return {"status": "success", "message": "Database successfully reseeded."}
+    return {"status": "success", "message": f"Contract successfully redeployed at {new_address} and database reseeded."}
 
 @app.post("/api/admin/run-analytics")
 def trigger_anomaly_detection(
@@ -125,27 +210,86 @@ def get_city_overview(db: Session = Depends(get_db)):
     verified_repairs = db.query(RoadRepair).filter(RoadRepair.status == "verified").count()
 
     # Ward map data (aggregated anomalies per Nagpur administrative zone)
-    # Severity is high if there are flagged logs or breached road repairs, medium if under_review, low otherwise.
-    ward_anomalies = {
-        "Laxmi Nagar": {"anomalies": 0, "severity": "low", "details": "All contractor ticket verification audits passing successfully."},
-        "Dharampeth": {"anomalies": 3, "severity": "high", "details": "1 GPS Telemetry Contradiction, 1 road restoration SLA breach (8 citizen complaints)"},
-        "Hanuman Nagar": {"anomalies": 0, "severity": "low", "details": "Road repair SLA verified clean and cleared."},
-        "Dhantoli": {"anomalies": 1, "severity": "medium", "details": "1 ML tonnage statistical weight outlier"},
-        "Nehru Nagar": {"anomalies": 0, "severity": "low", "details": "No active anomalies, normal compliance parameters."},
-        "Gandhi Baugh": {"anomalies": 4, "severity": "high", "details": "3 repeated identical weights registered (suspected sand/boulder recycling)"},
-        "Sataranjipura": {"anomalies": 0, "severity": "low", "details": "No active anomalies, normal operations."},
-        "Lakadganj": {"anomalies": 0, "severity": "low", "details": "No active anomalies, normal operations."},
-        "Ashi Nagar": {"anomalies": 0, "severity": "low", "details": "No active anomalies, normal compliance parameters."},
-        "Mangalwari": {"anomalies": 2, "severity": "medium", "details": "1 SLA road repair under active review, 1 ML weight outlier"}
-    }
-
-    # April to July monthly totals to show the 6,400+ MT drop
-    monthly_data = [
-        {"month": "April 2026", "tonnage_mt": 41250, "spend_inr": 18562500},
-        {"month": "May 2026", "tonnage_mt": 38100, "spend_inr": 17145000},
-        {"month": "June 2026", "tonnage_mt": 35420, "spend_inr": 15939000},
-        {"month": "July 2026", "tonnage_mt": 33600, "spend_inr": 15120000} # drop of 7,650 MT total
+    zones = [
+        "Laxmi Nagar",
+        "Dharampeth",
+        "Hanuman Nagar",
+        "Dhantoli",
+        "Nehru Nagar",
+        "Gandhi Baugh",
+        "Sataranjipura",
+        "Lakadganj",
+        "Ashi Nagar",
+        "Mangalwari"
     ]
+    ward_anomalies = {}
+    for zone in zones:
+        wb_logs = db.query(WeighbridgeLog).filter(WeighbridgeLog.zone == zone).all()
+        repairs = db.query(RoadRepair).all()
+        zone_repairs = [r for r in repairs if r.ward_name.replace(" Zone", "") == zone]
+        
+        flagged_wb = sum(1 for l in wb_logs if l.status == "flagged")
+        breached_rr = sum(1 for r in zone_repairs if r.status == "breached")
+        total_anomalies = flagged_wb + breached_rr
+        
+        under_review_wb = sum(1 for l in wb_logs if l.status == "under_review")
+        active_rr = sum(1 for r in zone_repairs if r.status == "active")
+        
+        if flagged_wb > 0 or breached_rr > 0:
+            severity = "high"
+        elif under_review_wb > 0 or active_rr > 0:
+            severity = "medium"
+        else:
+            severity = "low"
+            
+        details_parts = []
+        if flagged_wb > 0:
+            details_parts.append(f"{flagged_wb} flagged weighbridge log(s)")
+        if breached_rr > 0:
+            breached_complaints = sum(r.complaints_count for r in zone_repairs if r.status == "breached")
+            details_parts.append(f"{breached_rr} road restoration SLA breach(es) ({breached_complaints} citizen complaints)")
+        if under_review_wb > 0:
+            details_parts.append(f"{under_review_wb} weighbridge log(s) under review")
+        if active_rr > 0:
+            active_complaints = sum(r.complaints_count for r in zone_repairs if r.status == "active")
+            details_parts.append(f"{active_rr} road repair SLA(s) under active review ({active_complaints} citizen complaints)")
+            
+        if not details_parts:
+            details = "All contractor ticket verification audits passing successfully."
+        else:
+            details = ", ".join(details_parts)
+            
+        ward_anomalies[zone] = {
+            "anomalies": total_anomalies,
+            "severity": severity,
+            "details": details
+        }
+
+    # Calculate monthly tonnage history dynamically
+    from collections import defaultdict
+    monthly_groups = defaultdict(float)
+    all_logs = db.query(WeighbridgeLog).all()
+    for log in all_logs:
+        month_name = log.timestamp.strftime("%B %Y")
+        monthly_groups[month_name] += log.weight_kg / 1000.0
+
+    month_order = {
+        "April 2026": 1,
+        "May 2026": 2,
+        "June 2026": 3,
+        "July 2026": 4
+    }
+    
+    monthly_data = []
+    sorted_months = sorted(monthly_groups.keys(), key=lambda m: month_order.get(m, 99))
+    for m in sorted_months:
+        tonnage_mt = round(monthly_groups[m], 2)
+        spend_inr = round(tonnage_mt * 450.0, 2)
+        monthly_data.append({
+            "month": m,
+            "tonnage_mt": tonnage_mt,
+            "spend_inr": spend_inr
+        })
 
     return {
         "summary": {
@@ -587,6 +731,110 @@ def lock_record_on_chain(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Unexpected error executing blockchain transaction: {str(e)}"
         )
+
+def normalize_contractor(name: str) -> str:
+    if not name:
+        return ""
+    n = name.lower()
+    if "antony" in n:
+        return "antony-waste"
+    if "bvg" in n:
+        return "bvg-india"
+    if "amrut" in n or "yojana" in n:
+        return "amrut-repairs"
+    return n
+
+@app.get("/api/blockchain/verify/{tx_hash}")
+def verify_blockchain_record(tx_hash: str, db: Session = Depends(get_db)):
+    """
+    Queries local EVM and verifies data integrity between local DB and on-chain records.
+    """
+    try:
+        w3, contract, account = blockchain.get_web3_client()
+        tx = w3.eth.get_transaction(tx_hash)
+        receipt = w3.eth.get_transaction_receipt(tx_hash)
+        block = w3.eth.get_block(receipt['blockNumber'])
+        timestamp_iso = datetime.fromtimestamp(block['timestamp']).isoformat()
+    except blockchain.BlockchainConfigurationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Blockchain service unavailable: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Transaction with hash {tx_hash} was not found on-chain."
+        )
+
+    wb_record = db.query(WeighbridgeLog).filter(WeighbridgeLog.tx_hash == tx_hash).first()
+    rr_record = db.query(RoadRepair).filter(RoadRepair.tx_hash == tx_hash).first()
+    
+    if not wb_record and not rr_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No local database record found matching transaction hash {tx_hash}."
+        )
+        
+    mismatches = []
+    
+    if wb_record:
+        try:
+            on_chain = contract.functions.getWeighbridgeRecord(wb_record.id).call()
+            # on_chain: (ticketId, truckId, contractor, weightKg, timestamp, gpsRouteHash, dataHash, blockNumber, exists)
+            if on_chain[0] != wb_record.id:
+                mismatches.append(f"ticketId: Local '{wb_record.id}' vs On-Chain '{on_chain[0]}'")
+            if on_chain[1] != wb_record.truck_id:
+                mismatches.append(f"truckId: Local '{wb_record.truck_id}' vs On-Chain '{on_chain[1]}'")
+            if normalize_contractor(on_chain[2]) != normalize_contractor(wb_record.contractor_id):
+                mismatches.append(f"contractor: Local '{wb_record.contractor_id}' vs On-Chain '{on_chain[2]}'")
+            if abs(on_chain[3] - round(wb_record.weight_kg)) > 0.1:
+                mismatches.append(f"weightKg: Local '{wb_record.weight_kg}' vs On-Chain '{on_chain[3]}'")
+            if abs(on_chain[4] - int(wb_record.timestamp.timestamp())) > 5:
+                mismatches.append(f"timestamp: Local '{int(wb_record.timestamp.timestamp())}' vs On-Chain '{on_chain[4]}'")
+        except Exception as e:
+            mismatches.append(f"Failed to fetch or compare weighbridge record from contract: {str(e)}")
+    else:
+        try:
+            on_chain = contract.functions.getRoadRepairRecord(rr_record.id).call()
+            # on_chain: (repairId, contractor, wardName, locationGps, beforePhotoHash, afterPhotoHash, workDate, slaExpiryDate, complaintsCount, blockNumber, exists)
+            if on_chain[0] != rr_record.id:
+                mismatches.append(f"repairId: Local '{rr_record.id}' vs On-Chain '{on_chain[0]}'")
+            if normalize_contractor(on_chain[1]) != normalize_contractor(rr_record.contractor_id):
+                mismatches.append(f"contractor: Local '{rr_record.contractor_id}' vs On-Chain '{on_chain[1]}'")
+            if on_chain[2] != rr_record.ward_name:
+                mismatches.append(f"wardName: Local '{rr_record.ward_name}' vs On-Chain '{on_chain[2]}'")
+            if on_chain[3] != rr_record.location_gps:
+                mismatches.append(f"locationGps: Local '{rr_record.location_gps}' vs On-Chain '{on_chain[3]}'")
+            
+            disp_tag = rr_record.disposition or "cleared"
+            expected_before_hash = blockchain.compute_data_hash(f"{rr_record.before_photo_url or 'NO_BEFORE_PHOTO'}|DISP:{disp_tag}")
+            expected_after_hash = blockchain.compute_data_hash(f"{rr_record.after_photo_url or 'NO_AFTER_PHOTO'}|DISP:{disp_tag}")
+            
+            if on_chain[4] != expected_before_hash:
+                mismatches.append(f"beforePhotoHash: Recomputed '{expected_before_hash}' vs On-Chain '{on_chain[4]}'")
+            if on_chain[5] != expected_after_hash:
+                mismatches.append(f"afterPhotoHash: Recomputed '{expected_after_hash}' vs On-Chain '{on_chain[5]}'")
+                
+            if abs(on_chain[6] - int(rr_record.work_completed_date.timestamp())) > 5:
+                mismatches.append(f"workDate: Local '{int(rr_record.work_completed_date.timestamp())}' vs On-Chain '{on_chain[6]}'")
+            if abs(on_chain[7] - int(rr_record.sla_expiry_date.timestamp())) > 5:
+                mismatches.append(f"slaExpiryDate: Local '{int(rr_record.sla_expiry_date.timestamp())}' vs On-Chain '{on_chain[7]}'")
+            if on_chain[8] != rr_record.complaints_count:
+                mismatches.append(f"complaintsCount: Local '{rr_record.complaints_count}' vs On-Chain '{on_chain[8]}'")
+        except Exception as e:
+            mismatches.append(f"Failed to fetch or compare road repair record from contract: {str(e)}")
+
+    integrity_match = len(mismatches) == 0
+
+    return {
+        "success": receipt['status'] == 1,
+        "blockNumber": receipt['blockNumber'],
+        "timestamp": timestamp_iso,
+        "sender": tx['from'],
+        "lockedHash": tx_hash,
+        "integrity_match": integrity_match,
+        "mismatches": mismatches
+    }
 
 if __name__ == "__main__":
     import uvicorn

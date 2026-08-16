@@ -38,6 +38,7 @@ class WeighbridgeLog(Base):
     benchmarked_difference_pct = Column(Float, default=0.0) # deviation from benchmark
     disposition = Column(String, nullable=True) # "confirmed_fraud", "cleared", or null
     auditor_note = Column(Text, nullable=True) # Auditor ruling justification
+    zone = Column(String, nullable=True) # Administrative zone name (e.g. Laxmi Nagar, Dharampeth)
 
     contractor = relationship("Contractor", back_populates="weighbridge_logs")
     gps_trip = relationship("GPSTrip", uselist=False, back_populates="weighbridge_log")
