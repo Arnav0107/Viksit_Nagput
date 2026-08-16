@@ -7,8 +7,8 @@ import { PublicTransparency } from './components/PublicTransparency';
 import { Login } from './components/Login';
 import { Web3Console } from './components/Web3Console';
 import {
-  Building, BookOpen, FileSpreadsheet, ShieldAlert,
-  User, Sun, Moon, LogOut, Layers, LogIn, AlertCircle
+  LayoutDashboard, Building, BookOpen, FileSpreadsheet, ShieldAlert,
+  LogOut, LogIn, AlertCircle, Search, Flag, RefreshCw, ChevronRight, User, Menu
 } from 'lucide-react';
 
 interface ConsoleLog {
@@ -17,6 +17,14 @@ interface ConsoleLog {
   message: string;
   type: 'info' | 'success' | 'warn' | 'hex';
 }
+
+const PAGE_TITLES: Record<string, string> = {
+  overview: 'Dashboard',
+  contractors: 'Contractor Audit',
+  flags: 'Evidence Exhibits',
+  repairs: 'Road SLA Tracker',
+  transparency: 'Public Ledger',
+};
 
 function App() {
   const [token, setToken] = useState<string | null>(() => sessionStorage.getItem('auditchain_token'));
@@ -31,29 +39,27 @@ function App() {
   const [overviewData, setOverviewData] = useState<any>(null);
   const [contractors, setContractors] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light'); // Default to light theme
+  const [theme] = useState<'light' | 'dark'>('light');
   const [consoleLogs, setConsoleLogs] = useState<ConsoleLog[]>([]);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
   const pushWeb3Log = (source: string, message: string, type: 'info' | 'success' | 'warn' | 'hex' = 'info') => {
     const timestamp = new Date().toLocaleTimeString();
     setConsoleLogs(prev => [...prev, { timestamp, source, message, type }]);
   };
 
-  // Setup default blockchain logs on boot
   useEffect(() => {
     pushWeb3Log("Solidity System", "AuditChain.sol smart contract initialized on EVM.", "info");
     pushWeb3Log("Solidity System", "Contract Address: 0x5FbDB2315678afecb367f032d93F642f64180aa3", "hex");
     pushWeb3Log("Solidity System", "NMC Administrator signature seal registered on-chain.", "success");
   }, []);
 
-  // Fetch initial stats
   const fetchDossierData = async () => {
     setLoading(true);
     try {
       const updatedOverviewRes = await fetch('/api/overview');
       const oData = await updatedOverviewRes.json();
       setOverviewData(oData);
-
       const contractorsRes = await fetch('/api/contractors');
       const cData = await contractorsRes.json();
       setContractors(cData);
@@ -64,18 +70,11 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    fetchDossierData();
-  }, []);
+  useEffect(() => { fetchDossierData(); }, []);
 
-  // Handle dark mode DOM sync
   useEffect(() => {
     const root = window.document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
+    root.classList.remove('dark');
   }, [theme]);
 
   const handleLogin = (selectedRole: string, authToken: string, authUser: string, authDisplayName?: string) => {
@@ -85,12 +84,8 @@ function App() {
     setDisplayName(authDisplayName || authUser);
     setAuthError(null);
     setInlineNotice(null);
-    pushWeb3Log("Authorization", `Logged in under profile: [${selectedRole.toUpperCase()}] (${authDisplayName || authUser}) with valid JWT`, "success");
-    if (selectedRole === 'public') {
-      setCurrentView('transparency');
-    } else {
-      setCurrentView('overview');
-    }
+    pushWeb3Log("Authorization", `Logged in: [${selectedRole.toUpperCase()}] (${authDisplayName || authUser}) JWT issued.`, "success");
+    setCurrentView(selectedRole === 'public' ? 'transparency' : 'overview');
   };
 
   const handleExplorePublic = () => {
@@ -109,28 +104,22 @@ function App() {
     sessionStorage.removeItem('auditchain_role');
     sessionStorage.removeItem('auditchain_user');
     sessionStorage.removeItem('auditchain_display_name');
-    setRole(null);
-    setToken(null);
-    setUsername(null);
-    setDisplayName(null);
-    setInlineNotice(null);
+    setRole(null); setToken(null); setUsername(null); setDisplayName(null); setInlineNotice(null);
     if (logoutMessage) {
       setAuthError(logoutMessage);
       pushWeb3Log("Auth Security", `Session terminated: ${logoutMessage}`, "warn");
     } else {
       setAuthError(null);
-      pushWeb3Log("Authorization", `Session ended. Redirecting to authentication screen.`, "info");
+      pushWeb3Log("Authorization", "Session ended. Redirecting to authentication screen.", "info");
     }
   };
 
   const handleAuthError = (errMessage: string, isForbidden: boolean = false) => {
     if (isForbidden) {
-      // 403 Forbidden: show inline warning without logging out
       setInlineNotice(errMessage || "Access denied for your role.");
       pushWeb3Log("RBAC Policy", `Action rejected: ${errMessage}`, "warn");
       setTimeout(() => setInlineNotice(null), 7000);
     } else {
-      // 401 Unauthorized: session expired -> log out
       handleLogout(errMessage || "Session expired. Please log in again.");
     }
   };
@@ -138,293 +127,232 @@ function App() {
   const navigateToView = (view: string, targetId?: string) => {
     setCurrentView(view);
     setInlineNotice(null);
+    setIsMobileMenuOpen(false); // Close menu on navigation
     if (targetId) {
       setSelectedFlagCaseId(targetId);
-      pushWeb3Log("Dossier Index", `Direct navigation to exhibit case file [${targetId}]`, "info");
+      pushWeb3Log("Navigation", `Direct link to case file [${targetId}]`, "info");
     } else {
       setSelectedFlagCaseId(null);
-      pushWeb3Log("Dossier Index", `View switched to: [${view.toUpperCase()}]`, "info");
+      pushWeb3Log("Navigation", `View → ${PAGE_TITLES[view] || view}`, "info");
     }
   };
 
-  // Seeding trigger callback for demo UI
   const handleTriggerReseed = async () => {
-    pushWeb3Log("Admin Command", "Received re-seed instruction. Restoring SQLite parameters to baseline...", "warn");
+    pushWeb3Log("Admin Command", "Re-seed instruction received. Restoring SQLite baseline...", "warn");
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch('/api/admin/reseed', { method: 'POST', headers });
-
-      if (res.status === 401) {
-        handleAuthError("Session expired (401). Please log in again.", false);
-        return;
-      }
-
-      if (res.status === 403) {
-        handleAuthError("Unauthorized (403). Only Lead Auditors can reset the database.", true);
-        return;
-      }
-
+      if (res.status === 401) { handleAuthError("Session expired (401). Please log in again.", false); return; }
+      if (res.status === 403) { handleAuthError("Unauthorized (403). Only Lead Auditors can reset the database.", true); return; }
       const data = await res.json();
       if (data.status === 'success') {
-        pushWeb3Log("Admin Command", "EVM and Local DB reset complete. Seeded 120 weigh tickets, 2 high-severity contract alerts, 3 Amrut repairs.", "success");
+        pushWeb3Log("Admin Command", "EVM + DB reset complete. 120 weigh tickets, 2 alerts, 3 Amrut repairs seeded.", "success");
         await fetchDossierData();
       }
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
+  /* ── Login Screen ─────────────────────────────────────────────── */
   if (!role && !token) {
     return (
-      <div className="bg-dossier-bg min-h-screen text-dossier-text">
-        <div className="absolute top-4 right-4 flex gap-2 z-50">
-          <button
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="p-2 border border-dossier-border bg-dossier-card text-gray-500 hover:text-dossier-text cursor-pointer rounded-sm"
-          >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-        </div>
+      <div style={{ background: 'var(--color-bg)', minHeight: '100vh' }}>
         <Login onLogin={handleLogin} onExplorePublic={handleExplorePublic} initialError={authError} />
-        <div className="h-10"></div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen pb-36 transition-colors duration-150 bg-dossier-bg text-dossier-text">
+  /* ── Nav Items ─────────────────────────────────────────────────── */
+  const navItems = [
+    ...(role !== 'public' ? [
+      { view: 'overview',     icon: LayoutDashboard, label: 'Dashboard' },
+      { view: 'contractors',  icon: Building,        label: 'Contractor Audit' },
+      { view: 'flags',        icon: ShieldAlert,     label: 'Evidence Exhibits',
+        badge: overviewData?.summary?.flagged_weighs > 0 ? overviewData.summary.flagged_weighs : undefined },
+    ] : []),
+    { view: 'repairs',      icon: FileSpreadsheet, label: 'Road SLA Tracker' },
+    { view: 'transparency', icon: BookOpen,         label: 'Public Ledger' },
+  ];
 
-      {/* Platform Header */}
-      <header className="border-b border-dossier-border bg-dossier-card sticky top-0 z-30 font-mono text-xs">
-        <div className="max-w-[1600px] mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="border border-dossier-text px-2 py-1 font-bold text-sm tracking-tighter bg-dossier-bg">
-              AUDIT•CHAIN
+  const roleColors: Record<string, string> = {
+    auditor: '#DC2626',
+    officer: '#D97706',
+    public:  '#059669',
+  };
+
+  return (
+    <div style={{ background: 'var(--color-bg)', minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif" }}>
+
+      {isMobileMenuOpen && (
+        <div className="mobile-backdrop" onClick={() => setIsMobileMenuOpen(false)} />
+      )}
+
+      {/* ── Fixed Sidebar ──────────────────────────────────────────── */}
+      <aside className={`sidebar ${isMobileMenuOpen ? 'sidebar-open' : ''}`}>
+        {/* Logo */}
+        <div style={{ padding: '18px 16px 14px', borderBottom: '1px solid var(--color-border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 32, height: 32, background: 'var(--color-primary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Flag size={16} color="#fff" />
             </div>
             <div>
-              <span className="font-serif text-lg font-black uppercase tracking-tight block text-dossier-text">AuditChain Nagpur</span>
-              <span className="text-[10px] text-dossier-muted uppercase tracking-widest block font-bold">Tamper-Proof Ledger Verification</span>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-base)', lineHeight: 1.2 }}>AuditChain</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-muted)', lineHeight: 1.2 }}>Nagpur Municipal</div>
             </div>
           </div>
+        </div>
 
-          <div className="flex items-center gap-4">
-            {/* Seed Trigger Button for Lead Auditor */}
-            {role === 'auditor' && (
+        {/* Nav */}
+        <nav style={{ padding: '12px 10px', flex: 1, overflowY: 'auto' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 6px 8px' }}>
+            Navigation
+          </div>
+          {navItems.map(item => {
+            const Icon = item.icon;
+            const isActive = currentView === item.view;
+            return (
               <button
-                onClick={handleTriggerReseed}
-                className="text-[9px] border border-dossier-border text-dossier-text hover:bg-dossier-text/5 px-2 py-1 font-bold uppercase transition-colors cursor-pointer"
+                key={item.view}
+                onClick={() => navigateToView(item.view)}
+                className={`sidebar-nav-item${isActive ? ' active' : ''}`}
               >
-                Reset / Seed Ledger
+                <Icon size={16} style={{ flexShrink: 0 }} />
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {(item as any).badge && (
+                  <span style={{ background: '#FEE2E2', color: '#991B1B', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 9999 }}>
+                    {(item as any).badge}
+                  </span>
+                )}
               </button>
-            )}
+            );
+          })}
+        </nav>
 
-            {/* Profile Credentials Display */}
-            <div className="flex items-center gap-2 border-l border-dossier-border pl-4 text-dossier-text">
-              <User size={14} className="text-dossier-muted" />
-              <span className="font-bold uppercase text-[9px]">
-                CREDENTIAL: <span className={role === 'auditor' ? 'text-status-flagged' : role === 'officer' ? 'text-status-review' : 'text-status-verified'}>
-                  {role}
-                </span>
-                {displayName && <span className="text-dossier-muted font-normal ml-1">({displayName})</span>}
-              </span>
+        {/* Sidebar footer – user profile */}
+        <div style={{ borderTop: '1px solid var(--color-border)', padding: '12px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#F3F4F6', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <User size={14} style={{ color: 'var(--color-text-muted)' }} />
             </div>
-
-            {/* Theme Toggle */}
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-base)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {displayName || username || 'User'}
+              </div>
+              <div style={{ fontSize: 11, color: role ? roleColors[role] || 'var(--color-text-muted)' : 'var(--color-text-muted)', fontWeight: 500, textTransform: 'capitalize' }}>
+                {role || 'Guest'}
+              </div>
+            </div>
+          </div>
+          {token ? (
             <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-1.5 border border-dossier-border bg-dossier-card hover:bg-dossier-text/5 cursor-pointer"
-              title="Toggle Light / Dark Mode"
+              onClick={() => handleLogout()}
+              className="btn-ghost"
+              style={{ width: '100%', justifyContent: 'center', fontSize: 12 }}
             >
-              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+              <LogOut size={13} /> Sign Out
             </button>
+          ) : (
+            <button
+              onClick={() => handleLogout()}
+              className="btn-ghost"
+              style={{ width: '100%', justifyContent: 'center', fontSize: 12 }}
+            >
+              <LogIn size={13} /> Sign In
+            </button>
+          )}
+        </div>
+      </aside>
 
-            {/* Logout / Switch Role */}
-            {token ? (
-              <button
-                onClick={() => handleLogout()}
-                className="p-1.5 border border-status-flagged text-status-flagged hover:bg-status-flagged/5 cursor-pointer font-bold uppercase text-[9px] flex items-center gap-1"
-                title="Logout Session"
-              >
-                <LogOut size={14} />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => handleLogout()}
-                className="p-1.5 border border-status-verified text-status-verified hover:bg-status-verified/5 cursor-pointer font-bold uppercase text-[9px] flex items-center gap-1"
-                title="Sign In"
-              >
-                <LogIn size={14} />
-                <span>Sign In</span>
-              </button>
-            )}
-          </div>
+      {/* ── Fixed Top Header ───────────────────────────────────────── */}
+      <header className="top-header">
+        {/* Breadcrumb / Title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+          <button 
+            className="md:hidden" 
+            onClick={() => setIsMobileMenuOpen(true)}
+            style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--color-text-base)' }}
+          >
+            <Menu size={18} />
+          </button>
+          <span style={{ fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 500, display: 'none', '@media (min-width: 640px)': { display: 'inline' } } as any}>NMC</span>
+          <ChevronRight size={14} style={{ color: 'var(--color-text-muted)', flexShrink: 0, display: 'none', '@media (min-width: 640px)': { display: 'block' } } as any} />
+          <h1 className="t-h1" style={{ margin: 0, fontSize: 18, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {PAGE_TITLES[currentView] || 'AuditChain'}
+          </h1>
+        </div>
+
+        {/* Search Bar (center) */}
+        <div style={{ flex: 1, maxWidth: 360, position: 'relative', margin: '0 auto' }}>
+          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF', pointerEvents: 'none' }} />
+          <input
+            type="text"
+            placeholder="Search cases, wards, contractors…"
+            className="search-input"
+          />
+        </div>
+
+        {/* Right Side */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
+          {/* RBAC Notice */}
+          {inlineNotice && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 6, padding: '5px 10px', fontSize: 12, color: '#991B1B', fontWeight: 500 }}>
+              <AlertCircle size={13} />
+              <span style={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inlineNotice}</span>
+              <button onClick={() => setInlineNotice(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991B1B', fontWeight: 700, marginLeft: 4, padding: 0, fontSize: 14, lineHeight: 1 }}>×</button>
+            </div>
+          )}
+
+          {/* Reseed for Auditor */}
+          {role === 'auditor' && (
+            <button onClick={handleTriggerReseed} className="btn-ghost" style={{ fontSize: 12 }}>
+              <RefreshCw size={13} /> Reset Ledger
+            </button>
+          )}
+
+          {/* Report Issue CTA */}
+          <button onClick={() => navigateToView('repairs')} className="btn-primary" style={{ fontSize: 13 }}>
+            <Flag size={13} /> Report Issue
+          </button>
         </div>
       </header>
 
-      {/* Inline RBAC Warning Notice */}
-      {inlineNotice && (
-        <div className="max-w-[1600px] mx-auto px-6 pt-4">
-          <div className="border border-status-flagged bg-status-flagged/10 text-status-flagged p-3 font-mono text-xs flex items-center justify-between">
-            <div className="flex items-center gap-2 font-bold">
-              <AlertCircle size={15} />
-              <span>{inlineNotice}</span>
-            </div>
-            <button 
-              onClick={() => setInlineNotice(null)}
-              className="text-[10px] uppercase font-bold hover:underline cursor-pointer"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
+      {/* ── Main Content ───────────────────────────────────────────── */}
+      <main className="main-content" style={{ paddingBottom: 220 }}>
+        <div className="content-container">
 
-      {/* Main Layout Area */}
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-          {/* Sidebar Index (Print Report Index Look) */}
-          <aside className="lg:col-span-3 font-mono text-xs space-y-4">
-            <div className="border border-dossier-border p-4 bg-dossier-card">
-              <span className="text-[9px] text-dossier-muted block tracking-wider uppercase mb-3 font-bold">Document Sections</span>
-              <nav className="space-y-1">
-
-                {role !== 'public' && (
-                  <>
-                    <button
-                      onClick={() => navigateToView('overview')}
-                      className={`w-full flex items-center justify-between px-3 py-2 border font-bold uppercase transition-colors text-left cursor-pointer ${currentView === 'overview'
-                          ? 'bg-dossier-text text-dossier-bg border-dossier-text'
-                          : 'border-transparent hover:bg-dossier-text/5 text-dossier-text'
-                        }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Layers size={13} />
-                        <span>1. Zone Summary</span>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => navigateToView('contractors')}
-                      className={`w-full flex items-center justify-between px-3 py-2 border font-bold uppercase transition-colors text-left cursor-pointer ${currentView === 'contractors'
-                          ? 'bg-dossier-text text-dossier-bg border-dossier-text'
-                          : 'border-transparent hover:bg-dossier-text/5 text-dossier-text'
-                        }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Building size={13} />
-                        <span>2. Contractor Audit</span>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => navigateToView('flags')}
-                      className={`w-full flex items-center justify-between px-3 py-2 border font-bold uppercase transition-colors text-left cursor-pointer ${currentView === 'flags'
-                          ? 'bg-dossier-text text-dossier-bg border-dossier-text'
-                          : 'border-transparent hover:bg-dossier-text/5 text-dossier-text'
-                        }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <ShieldAlert size={13} className={currentView === 'flags' ? '' : 'text-status-flagged'} />
-                        <span>3. Evidence Exhibits</span>
-                      </div>
-                      {overviewData?.summary?.flagged_weighs > 0 && (
-                        <span className="bg-status-flagged/10 text-status-flagged border border-status-flagged/30 text-[9px] font-bold px-1.5 py-0.5 rounded-sm">
-                          {overviewData.summary.flagged_weighs} Alert
-                        </span>
-                      )}
-                    </button>
-                  </>
-                )}
-
-                <button
-                  onClick={() => navigateToView('repairs')}
-                  className={`w-full flex items-center gap-2 px-3 py-2 border font-bold uppercase transition-colors text-left cursor-pointer ${currentView === 'repairs'
-                      ? 'bg-dossier-text text-dossier-bg border-dossier-text'
-                      : 'border-transparent hover:bg-dossier-text/5 text-dossier-text'
-                    }`}
-                >
-                  <FileSpreadsheet size={13} />
-                  <span>{role === 'public' ? '1. Road SLA Tracker' : '4. Road SLA Tracker'}</span>
-                </button>
-
-                <button
-                  onClick={() => navigateToView('transparency')}
-                  className={`w-full flex items-center gap-2 px-3 py-2 border font-bold uppercase transition-colors text-left cursor-pointer ${currentView === 'transparency'
-                      ? 'bg-dossier-text text-dossier-bg border-dossier-text'
-                      : 'border-transparent hover:bg-dossier-text/5 text-dossier-text'
-                    }`}
-                >
-                  <BookOpen size={13} />
-                  <span>{role === 'public' ? '2. Public Ledger' : '5. Public Ledger'}</span>
-                </button>
-
-              </nav>
-            </div>
-
-            {/* Print Note Card */}
-            <div className="border border-dossier-border p-4 bg-dossier-card font-sans leading-relaxed text-[11px] text-dossier-text">
-              <span className="font-mono text-[9px] text-dossier-muted block uppercase tracking-wider mb-1.5 font-bold">Audit Parameters:</span>
-              Dharampeth, Hanuman Nagar, Dhantoli, Nehru Nagar, Gandhi Baugh, Laxmi Nagar, Sataranjipura, Lakadganj, Ashi Nagar, and Mangalwari constitute the 10 official NMC administrative zones under audit.
-            </div>
-          </aside>
-
-          {/* Core Content Viewer */}
-          <main className="lg:col-span-9">
-            {currentView === 'overview' && (
-              <Overview
-                data={overviewData}
-                loading={loading}
-                onNavigate={navigateToView}
-              />
-            )}
-
-            {currentView === 'contractors' && (
-              <ContractorDetail
-                contractors={contractors}
-                onNavigate={navigateToView}
-              />
-            )}
-
-            {currentView === 'flags' && (
-              <FlaggedCases
-                initialCaseId={selectedFlagCaseId}
-                role={role || 'public'}
-                token={token}
-                onAuthError={handleAuthError}
-                onPushWeb3Log={pushWeb3Log}
-              />
-            )}
-
-            {currentView === 'repairs' && (
-              <RoadRepairs
-                role={role || 'public'}
-                token={token}
-                onAuthError={handleAuthError}
-                onPushWeb3Log={pushWeb3Log}
-              />
-            )}
-
-            {currentView === 'transparency' && (
-              <PublicTransparency
-                data={overviewData}
-              />
-            )}
-          </main>
+          {currentView === 'overview' && (
+            <Overview data={overviewData} loading={loading} onNavigate={navigateToView} />
+          )}
+          {currentView === 'contractors' && (
+            <ContractorDetail contractors={contractors} onNavigate={navigateToView} />
+          )}
+          {currentView === 'flags' && (
+            <FlaggedCases
+              initialCaseId={selectedFlagCaseId}
+              role={role || 'public'}
+              token={token}
+              onAuthError={handleAuthError}
+              onPushWeb3Log={pushWeb3Log}
+            />
+          )}
+          {currentView === 'repairs' && (
+            <RoadRepairs
+              role={role || 'public'}
+              token={token}
+              onAuthError={handleAuthError}
+              onPushWeb3Log={pushWeb3Log}
+            />
+          )}
+          {currentView === 'transparency' && (
+            <PublicTransparency data={overviewData} />
+          )}
 
         </div>
-      </div>
+      </main>
 
-      {/* Cryptographic Node console feed */}
-      <Web3Console
-        logs={consoleLogs}
-        onClear={() => setConsoleLogs([])}
-      />
+      {/* ── Web3 Console ──────────────────────────────────────────── */}
+      <Web3Console logs={consoleLogs} onClear={() => setConsoleLogs([])} />
+
     </div>
   );
 }

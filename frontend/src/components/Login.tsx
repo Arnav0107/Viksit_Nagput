@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, ShieldAlert, Users, AlertTriangle, KeyRound, UserCheck, Loader2, ExternalLink } from 'lucide-react';
+import { Shield, ShieldAlert, Users, AlertTriangle, KeyRound, Loader2, ExternalLink, Flag } from 'lucide-react';
 
 interface LoginProps {
   onLogin: (role: string, token: string, username: string, displayName?: string) => void;
@@ -11,12 +11,14 @@ const DEMO_PRESETS = [
   {
     role: 'auditor',
     title: 'NMC Lead Auditor',
-    subtitle: 'Cryptographic signing & on-chain sealing (Full RBAC)',
+    subtitle: 'Cryptographic signing & on-chain sealing — Full RBAC access',
     username: 'auditor_nmc',
     password: 'auditor123',
     displayName: 'NMC Lead Auditor',
     icon: Shield,
-    badgeColor: 'border-status-flagged text-status-flagged bg-status-flagged/10',
+    accent: '#DC2626',
+    accentBg: '#FEF2F2',
+    tag: 'Full Access',
   },
   {
     role: 'officer',
@@ -26,17 +28,21 @@ const DEMO_PRESETS = [
     password: 'officer123',
     displayName: 'Ward Zone Officer',
     icon: ShieldAlert,
-    badgeColor: 'border-status-review text-status-review bg-status-review/10',
+    accent: '#D97706',
+    accentBg: '#FFFBEB',
+    tag: 'SLA Review',
   },
   {
     role: 'public',
     title: 'Public Transparency',
-    subtitle: 'Read-only transaction ledger & complaint filing',
+    subtitle: 'Read-only ledger & complaint filing — No login required',
     username: 'citizen_nagpur',
     password: 'public123',
     displayName: 'Public Transparency',
     icon: Users,
-    badgeColor: 'border-status-verified text-status-verified bg-status-verified/10',
+    accent: '#059669',
+    accentBg: '#F0FDF4',
+    tag: 'Read Only',
   },
 ];
 
@@ -52,26 +58,16 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onExplorePublic, initialE
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: loginUser, password: loginPass }),
       });
-
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Authentication failed. Please verify credentials.');
-      }
-
+      if (!response.ok) throw new Error(data.detail || 'Authentication failed.');
       const displayName = data.display_name || presetDisplayName || data.username;
-
-      // Store token securely in sessionStorage (not localStorage)
       sessionStorage.setItem('auditchain_token', data.access_token);
       sessionStorage.setItem('auditchain_role', data.role);
       sessionStorage.setItem('auditchain_user', data.username);
       sessionStorage.setItem('auditchain_display_name', displayName);
-
       onLogin(data.role, data.access_token, data.username, displayName);
     } catch (err: any) {
       setError(err.message || 'Unable to connect to authentication server');
@@ -88,165 +84,171 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onExplorePublic, initialE
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !password.trim()) {
-      setError('Please enter both username and password.');
-      return;
-    }
+    if (!username.trim() || !password.trim()) { setError('Please enter both username and password.'); return; }
     executeLogin(username, password);
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center p-4">
-      <div className="max-w-lg w-full border border-dossier-border bg-dossier-card p-8 rounded-none relative shadow-sm">
-        
-        {/* Dossier stamp overlay design */}
-        <div className="absolute top-0 right-0 w-24 h-24 border-b border-l border-dossier-border p-2 flex flex-col justify-center items-center select-none pointer-events-none">
-          <span className="font-mono text-[8px] text-dossier-muted font-bold uppercase tracking-tighter">SECURE•AUTH</span>
-          <span className="font-mono text-[7px] text-status-verified font-bold uppercase tracking-widest mt-0.5">JWT • HS256</span>
+    <div style={{ minHeight: '100vh', display: 'flex', background: 'var(--color-bg)' }}>
+      {/* Left decorative panel */}
+      <div style={{ width: '40%', background: '#111827', padding: '48px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 40, height: 40, background: 'var(--color-primary)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Flag size={20} color="#fff" />
+          </div>
+          <div>
+            <div style={{ color: '#fff', fontWeight: 700, fontSize: 16, lineHeight: 1.2 }}>AuditChain</div>
+            <div style={{ color: '#9CA3AF', fontSize: 12 }}>Nagpur Municipal Corporation</div>
+          </div>
         </div>
 
-        <div className="text-center pb-6 border-b border-dashed border-dossier-border mb-6">
-          <span className="font-mono text-[9px] text-dossier-muted block tracking-widest font-bold">DECENTRALIZED AUDITING</span>
-          <h1 className="font-serif text-3xl font-black tracking-tight mt-1 text-dossier-text">AuditChain Nagpur</h1>
-          <p className="text-[10px] text-dossier-muted font-mono mt-1.5 uppercase font-bold">Civic-Tech Municipal Contract Auditing Portal</p>
-        </div>
+        <div>
+          <h2 style={{ color: '#fff', fontSize: 28, fontWeight: 700, lineHeight: 1.3, marginBottom: 16 }}>
+            Tamper-Proof<br />Civic Audit Portal
+          </h2>
+          <p style={{ color: '#9CA3AF', fontSize: 14, lineHeight: 1.6, marginBottom: 32 }}>
+            Blockchain-secured weighbridge verification, road SLA tracking, and cryptographic on-chain ruling for Nagpur Municipal contracts.
+          </p>
 
-        {/* Error Notification */}
-        {error && (
-          <div className="mb-6 p-3 border border-status-flagged bg-status-flagged/10 text-status-flagged text-xs font-mono flex items-start gap-2 animate-fadeIn">
-            <AlertTriangle size={15} className="shrink-0 mt-0.5" />
-            <div>
-              <span className="font-bold uppercase block">Authentication Error</span>
-              <span className="text-[11px] opacity-90">{error}</span>
+          {/* Feature list */}
+          {['GPS-verified trip telemetry', 'Smart contract on-chain sealing', '10 NMC zone audit coverage', 'Public transparency ledger'].map(f => (
+            <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-primary)', flexShrink: 0 }} />
+              <span style={{ color: '#D1D5DB', fontSize: 13 }}>{f}</span>
             </div>
-          </div>
-        )}
+          ))}
+        </div>
 
-        {/* Quick-Select Demo Roles */}
-        <div className="space-y-2.5 mb-6">
-          <div className="text-center font-mono text-[10px] text-dossier-muted uppercase font-bold tracking-wider mb-2">
-            Quick-Select Demo Role (1-Click Demo)
-          </div>
+        <div style={{ color: '#4B5563', fontSize: 12 }}>
+          NMC-2026-V8 · JWT HS256 Auth · Solidity EVM
+        </div>
+      </div>
 
-          <div className="grid grid-cols-1 gap-2">
-            {DEMO_PRESETS.map((preset) => {
-              const Icon = preset.icon;
-              const isSelected = username === preset.username;
-              return (
-                <button
-                  key={preset.role}
-                  type="button"
-                  disabled={loading}
-                  onClick={() => handlePresetSelect(preset)}
-                  className={`w-full border p-3 bg-dossier-bg transition-all text-left flex gap-3 items-center group cursor-pointer ${
-                    isSelected ? 'border-dossier-text ring-1 ring-dossier-text' : 'border-dossier-border hover:border-dossier-text'
-                  } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <div className={`p-2 border shrink-0 ${preset.badgeColor}`}>
-                    <Icon size={16} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-serif font-black text-xs uppercase text-dossier-text">
-                        {preset.title}
-                      </h3>
-                      <span className="font-mono text-[8px] uppercase tracking-wider text-dossier-muted px-1 border border-dossier-border bg-dossier-card">
-                        {preset.username}
-                      </span>
+      {/* Right login panel */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 32px' }}>
+        <div style={{ width: '100%', maxWidth: 420 }}>
+          <h1 className="t-h1" style={{ marginBottom: 6 }}>Sign in to AuditChain</h1>
+          <p style={{ color: 'var(--color-text-muted)', marginBottom: 28, fontSize: 14 }}>
+            Select your role or enter credentials below.
+          </p>
+
+          {/* Error */}
+          {error && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '12px 14px', marginBottom: 20, fontSize: 13, color: '#991B1B' }}>
+              <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Quick-select roles */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+              Quick-select demo role
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {DEMO_PRESETS.map(preset => {
+                const Icon = preset.icon;
+                const isSelected = username === preset.username;
+                return (
+                  <button
+                    key={preset.role}
+                    type="button"
+                    disabled={loading}
+                    onClick={() => handlePresetSelect(preset)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '12px 14px',
+                      border: `1px solid ${isSelected ? preset.accent : 'var(--color-border)'}`,
+                      borderRadius: 8,
+                      background: isSelected ? preset.accentBg : 'var(--color-surface)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.12s',
+                      opacity: loading ? 0.6 : 1,
+                    }}
+                  >
+                    <div style={{ width: 36, height: 36, borderRadius: 8, background: preset.accentBg, border: `1px solid ${preset.accent}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Icon size={16} style={{ color: preset.accent }} />
                     </div>
-                    <p className="text-[9px] text-dossier-muted font-mono uppercase truncate mt-0.5">
-                      {preset.subtitle}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Manual Credentials Form */}
-        <form onSubmit={handleSubmit} className="border-t border-dashed border-dossier-border pt-5 space-y-4">
-          <div className="font-mono text-[10px] text-dossier-muted uppercase font-bold tracking-wider">
-            Or Sign In With Custom Credentials
-          </div>
-
-          <div className="space-y-3 font-mono text-xs">
-            <div>
-              <label className="block text-[9px] uppercase font-bold text-dossier-muted mb-1">
-                Username
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="e.g. auditor_nmc"
-                  required
-                  disabled={loading}
-                  className="w-full bg-dossier-bg border border-dossier-border px-3 py-2 text-dossier-text focus:outline-none focus:border-dossier-text font-mono text-xs"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[9px] uppercase font-bold text-dossier-muted mb-1">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  disabled={loading}
-                  className="w-full bg-dossier-bg border border-dossier-border px-3 py-2 text-dossier-text focus:outline-none focus:border-dossier-text font-mono text-xs"
-                />
-              </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-text-base)' }}>{preset.title}</span>
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 9999, background: preset.accentBg, color: preset.accent, border: `1px solid ${preset.accent}44`, flexShrink: 0 }}>
+                          {preset.tag}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {preset.subtitle}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-dossier-text text-dossier-bg py-2.5 font-mono text-xs uppercase font-bold tracking-wider hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <>
-                <Loader2 size={14} className="animate-spin" />
-                <span>Verifying Credentials &amp; Generating JWT...</span>
-              </>
-            ) : (
-              <>
-                <KeyRound size={14} />
-                <span>Authenticate &amp; Issue Token</span>
-              </>
-            )}
-          </button>
-        </form>
+          {/* Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+            <span style={{ fontSize: 12, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>or sign in manually</span>
+            <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+          </div>
 
-        {/* Public Access Link */}
-        {onExplorePublic && (
-          <div className="mt-4 pt-3 border-t border-dossier-border text-center">
-            <button
-              type="button"
-              onClick={onExplorePublic}
-              className="text-[11px] font-mono text-status-verified hover:underline flex items-center justify-center gap-1.5 mx-auto font-bold uppercase cursor-pointer"
-            >
-              <ExternalLink size={12} />
-              <span>Explore Public Transparency Portal (No Login Required)</span>
+          {/* Manual form */}
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-base)', marginBottom: 6 }}>Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="e.g. auditor_nmc"
+                required
+                disabled={loading}
+                style={{ width: '100%', height: 40, border: '1px solid var(--color-border)', borderRadius: 6, padding: '0 12px', fontSize: 14, color: 'var(--color-text-base)', background: 'var(--color-surface)', outline: 'none' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-base)', marginBottom: 6 }}>Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                disabled={loading}
+                style={{ width: '100%', height: 40, border: '1px solid var(--color-border)', borderRadius: 6, padding: '0 12px', fontSize: 14, color: 'var(--color-text-base)', background: 'var(--color-surface)', outline: 'none' }}
+              />
+            </div>
+
+            <button type="submit" disabled={loading} className="btn-primary" style={{ justifyContent: 'center', height: 42, fontSize: 14 }}>
+              {loading ? (
+                <><Loader2 size={15} className="animate-spin" /> Authenticating…</>
+              ) : (
+                <><KeyRound size={15} /> Authenticate & Issue Token</>
+              )}
             </button>
-          </div>
-        )}
+          </form>
 
-        <div className="mt-6 font-mono text-[9px] text-dossier-muted text-center leading-relaxed">
-          <div className="flex justify-center items-center gap-1 text-status-flagged font-bold uppercase mb-1">
-            <UserCheck size={11} />
-            <span>NMC RBAC ENFORCEMENT</span>
+          {/* Public portal link */}
+          {onExplorePublic && (
+            <div style={{ marginTop: 20, textAlign: 'center' }}>
+              <button
+                type="button"
+                onClick={onExplorePublic}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--color-accent)', fontSize: 13, fontWeight: 500 }}
+              >
+                <ExternalLink size={13} />
+                Explore Public Transparency Portal — No login required
+              </button>
+            </div>
+          )}
+
+          <div style={{ marginTop: 24, fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', lineHeight: 1.5 }}>
+            JWT bearer tokens are validated server-side on all mutating endpoints.<br />
+            RBAC policy is enforced per NMC role assignment.
           </div>
-          Server validates signed JWT bearer headers on all mutating blockchain &amp; administrative endpoints.
         </div>
-
       </div>
     </div>
   );

@@ -25,60 +25,72 @@ export const Web3Console: React.FC<Web3ConsoleProps> = ({ logs, onClear }) => {
 
   const getLogStyle = (type: string) => {
     switch (type) {
-      case 'success': return 'text-status-verified';
-      case 'warn': return 'text-status-review';
-      case 'hex': return 'text-gray-400 select-all';
-      default: return 'text-gray-300';
+      case 'success': return '#059669';
+      case 'warn': return '#D97706';
+      case 'hex': return '#9CA3AF';
+      default: return '#D1D5DB';
     }
   };
 
+  const parseLogMessage = (msg: string, defaultColor: string) => {
+    const hexRegex = /(0x[a-fA-F0-9]{10,})/g;
+    const parts = msg.split(hexRegex);
+    return parts.map((part, i) => {
+      if (hexRegex.test(part)) {
+        return <span key={i} style={{ color: 'var(--color-primary)', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>{part}</span>;
+      }
+      return <span key={i} style={{ color: defaultColor }}>{part}</span>;
+    });
+  };
+
   return (
-    <div className="border-t-2 border-black dark:border-dossier-border-dark bg-[#0a0c0e] text-white z-40 fixed bottom-0 left-0 right-0">
+    <div className="web3-console">
       
       {/* Console Header Bar */}
       <div 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex justify-between items-center py-2 px-4 cursor-pointer hover:bg-white/[0.02] border-b border-white/[0.05]"
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px', cursor: 'pointer', borderBottom: '1px solid #374151', background: isOpen ? '#1F2937' : 'transparent' }}
       >
-        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider font-bold">
-          <Terminal size={14} className="text-status-verified" />
-          <span>AuditChain Decentralized Ledger Output Feed</span>
-          <span className="bg-status-verified/15 text-status-verified border border-status-verified/30 rounded px-1.5 py-0.5 text-[8px] flex items-center gap-1 font-bold">
-            <Cpu size={10} className="animate-spin" />
-            EVM RPC: 8545
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Terminal size={14} style={{ color: '#10B981' }} />
+          <span style={{ fontSize: 11, fontWeight: 600, color: '#D1D5DB', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            AuditChain EVM Console
+          </span>
+          <span style={{ background: 'rgba(16,185,129,0.1)', color: '#10B981', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 4, padding: '2px 6px', fontSize: 10, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+            <Cpu size={12} className="animate-spin" />
+            RPC: 8545
           </span>
         </div>
-        <div className="flex items-center gap-4 text-xs font-mono text-gray-500">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              onClear();
-            }}
-            className="hover:text-white uppercase font-bold text-[9px] border border-white/10 px-2 py-0.5 rounded"
+            onClick={(e) => { e.stopPropagation(); onClear(); }}
+            style={{ background: 'none', border: '1px solid #4B5563', borderRadius: 4, padding: '2px 8px', color: '#9CA3AF', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', cursor: 'pointer' }}
           >
             Clear logs
           </button>
-          {isOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+          {isOpen ? <ChevronDown size={14} style={{ color: '#9CA3AF' }} /> : <ChevronUp size={14} style={{ color: '#9CA3AF' }} />}
         </div>
       </div>
 
       {/* Terminal Output */}
       {isOpen && (
-        <div className="h-32 overflow-y-auto px-6 py-3 font-mono text-[10px] space-y-1.5 custom-scrollbar bg-[#07080a]">
+        <div style={{ height: 160, overflowY: 'auto', padding: '12px 16px', fontFamily: "'JetBrains Mono', 'Courier New', monospace", fontSize: 12, backgroundColor: '#111827' }} className="custom-scrollbar">
           {logs.length === 0 ? (
-            <div className="text-gray-500 text-center py-6">
+            <div style={{ color: '#6B7280', textAlign: 'center', padding: '30px 0' }}>
               Listening for cryptographic ledger transactions. Verify an exhibit or sign a ticket on-chain to trigger logs.
             </div>
           ) : (
-            logs.map((log, idx) => (
-              <div key={idx} className="flex gap-2 leading-relaxed">
-                <span className="text-gray-600 shrink-0">[{log.timestamp}]</span>
-                <span className="text-status-review font-bold shrink-0">[{log.source}]</span>
-                <span className={getLogStyle(log.type)}>{log.message}</span>
-              </div>
-            ))
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {logs.map((log, idx) => (
+                <div key={idx} style={{ display: 'flex', gap: 8, lineHeight: 1.5 }}>
+                  <span style={{ color: '#6B7280', flexShrink: 0 }}>[{log.timestamp}]</span>
+                  <span style={{ color: 'var(--color-accent)', fontWeight: 600, flexShrink: 0 }}>[{log.source}]</span>
+                  <span style={{ wordBreak: 'break-all' }}>{parseLogMessage(log.message, getLogStyle(log.type))}</span>
+                </div>
+              ))}
+              <div ref={bottomRef} />
+            </div>
           )}
-          <div ref={bottomRef} />
         </div>
       )}
     </div>
