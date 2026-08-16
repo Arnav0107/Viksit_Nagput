@@ -13,6 +13,8 @@ ENV/
 env/
 auditchain.db
 *.db
+.env
+*.env
 .pytest_cache/
 
 # Node / Frontend

@@ -17,6 +17,7 @@ class Contractor(Base):
     name = Column(String, nullable=False)
     type = Column(String, nullable=False) # "waste" or "road"
     total_claims_inr = Column(Float, default=0.0)
+    fraud_flags_confirmed = Column(Integer, default=0) # count of confirmed fraud rulings
 
     weighbridge_logs = relationship("WeighbridgeLog", back_populates="contractor")
     road_repairs = relationship("RoadRepair", back_populates="contractor")
@@ -31,10 +32,12 @@ class WeighbridgeLog(Base):
     weight_kg = Column(Float, nullable=False)
     driver_name = Column(String, nullable=False)
     gps_route_id = Column(String, nullable=True)
-    status = Column(String, default="under_review") # "verified", "flagged", "under_review"
+    status = Column(String, default="under_review") # "verified", "flagged", "under_review", "confirmed_fraud", "cleared"
     flag_reason = Column(Text, nullable=True)
     tx_hash = Column(String, nullable=True) # Blockchain Transaction Hash
     benchmarked_difference_pct = Column(Float, default=0.0) # deviation from benchmark
+    disposition = Column(String, nullable=True) # "confirmed_fraud", "cleared", or null
+    auditor_note = Column(Text, nullable=True) # Auditor ruling justification
 
     contractor = relationship("Contractor", back_populates="weighbridge_logs")
     gps_trip = relationship("GPSTrip", uselist=False, back_populates="weighbridge_log")
@@ -73,11 +76,27 @@ class RoadRepair(Base):
     after_photo_url = Column(Text, nullable=False)
     work_completed_date = Column(DateTime, nullable=False)
     sla_expiry_date = Column(DateTime, nullable=False)
-    status = Column(String, default="active") # "active", "breached", "verified"
+    status = Column(String, default="active") # "active", "breached", "verified", "confirmed_fraud", "cleared"
     complaints_count = Column(Integer, default=0)
     tx_hash = Column(String, nullable=True) # Blockchain Transaction Hash
+    disposition = Column(String, nullable=True) # "confirmed_fraud", "cleared", or null
+    auditor_note = Column(Text, nullable=True) # Auditor ruling justification
 
     contractor = relationship("Contractor", back_populates="road_repairs")
+
+class Vehicle(Base):
+    __tablename__ = "vehicles"
+
+    truck_id = Column(String, primary_key=True, index=True) # e.g., "MH-31-EQ-4520"
+    rated_capacity_kg = Column(Integer, nullable=False, default=10000)
+
+class DumpingGroundGateLog(Base):
+    __tablename__ = "dumping_ground_gate_logs"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    truck_id = Column(String, index=True, nullable=False)
+    entry_timestamp = Column(DateTime, nullable=False, default=datetime.utcnow)
+    gate_id = Column(String, nullable=False, default="BHANDEWADI-GATE-1")
 
 def get_db():
     db = SessionLocal()
@@ -88,3 +107,5 @@ def get_db():
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+
+
