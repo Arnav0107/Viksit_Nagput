@@ -45,7 +45,7 @@ export const Web3Console: React.FC<Web3ConsoleProps> = ({ logs, onClear }) => {
           <span>AuditChain Decentralized Ledger Output Feed</span>
           <span className="bg-status-verified/15 text-status-verified border border-status-verified/30 rounded px-1.5 py-0.5 text-[8px] flex items-center gap-1 font-bold">
             <Cpu size={10} className="animate-spin" />
-            SOLC MOCK RPC: 8000
+            EVM RPC: 8545
           </span>
         </div>
         <div className="flex items-center gap-4 text-xs font-mono text-gray-500">
