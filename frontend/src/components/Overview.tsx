@@ -1,425 +1,408 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Database, TrendingDown, ArrowRight, Building, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, Database, TrendingDown, ArrowRight, Building, ShieldAlert, Scale, Info } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { MapContainer, TileLayer, CircleMarker, GeoJSON, Popup, Tooltip as LeafletTooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-
-// Nagpur administrative city boundary GeoJSON
 import nagpurBoundary from '../data/nagpur-boundary.json';
 
 interface OverviewProps {
   data: any;
   loading: boolean;
   onNavigate: (view: string, targetId?: string) => void;
+  premiumVibe?: boolean;
 }
 
-export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate }) => {
+const SystemStatusDossier = () => (
+  <div className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl p-5 shadow-sm text-slate-900 flex flex-col gap-3">
+    <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1 m-0">System Status</h4>
+    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+        <span className="text-xs text-slate-500 font-medium">RPC Latency</span>
+        <span className="text-xs font-mono text-emerald-600 font-bold">12ms</span>
+      </div>
+      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+        <span className="text-xs text-slate-500 font-medium">Last Block</span>
+        <span className="text-xs font-mono text-slate-700">#19482719</span>
+      </div>
+      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+        <span className="text-xs text-slate-500 font-medium">Active Tonnage</span>
+        <span className="text-xs font-mono text-slate-700">12,450 MT</span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="text-xs text-slate-500 font-medium">SLA Compliance</span>
+        <span className="text-xs font-bold text-slate-700 tabular-nums">94.2%</span>
+      </div>
+  </div>
+);
+
+export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate, premiumVibe }) => {
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
 
-  // Approximate lat/lng coordinates for all 10 official Nagpur administrative zones
   const zonesData = [
-    { name: "Dhantoli", coords: [21.1299, 79.0798] },
-    { name: "Dharampeth", coords: [21.1426, 79.0559] },
-    { name: "Hanuman Nagar", coords: [21.1189, 79.1039] },
-    { name: "Nehru Nagar", coords: [21.1150, 79.1180] },
-    { name: "Gandhi Baugh", coords: [21.1550, 79.1050] },
-    { name: "Sataranjipura", coords: [21.1620, 79.1120] },
-    { name: "Lakadganj", coords: [21.1520, 79.1320] },
-    { name: "Ashi Nagar", coords: [21.1780, 79.1200] },
-    { name: "Mangalwari", coords: [21.1710, 79.0720] },
-    { name: "Laxmi Nagar", coords: [21.1255, 79.0680] }
+    { name: "Dhantoli",       coords: [21.1299, 79.0798] },
+    { name: "Dharampeth",     coords: [21.1426, 79.0559] },
+    { name: "Hanuman Nagar",  coords: [21.1189, 79.1039] },
+    { name: "Nehru Nagar",    coords: [21.1150, 79.1180] },
+    { name: "Gandhi Baugh",   coords: [21.1550, 79.1050] },
+    { name: "Sataranjipura",  coords: [21.1620, 79.1120] },
+    { name: "Lakadganj",      coords: [21.1520, 79.1320] },
+    { name: "Ashi Nagar",     coords: [21.1780, 79.1200] },
+    { name: "Mangalwari",     coords: [21.1710, 79.0720] },
+    { name: "Laxmi Nagar",    coords: [21.1255, 79.0680] },
   ];
 
   if (loading || !data) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 font-mono text-xs text-dossier-text">
-        <div className="w-8 h-8 border-2 border-dossier-border border-t-dossier-text animate-spin rounded-full mb-4"></div>
-        <span className="animate-pulse">PARSING CRYPTOGRAPHIC LEDGER REGISTRY...</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24, animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}>
+        <div>
+          <div style={{ height: 30, width: 250, background: '#E5E7EB', borderRadius: 6, marginBottom: 8 }} />
+          <div style={{ height: 16, width: 350, background: '#F3F4F6', borderRadius: 4 }} />
+        </div>
+        <div style={{ height: 68, width: '100%', background: '#F3F4F6', borderRadius: 8 }} />
+        <div className="grid-cols-responsive-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="metric-card" style={{ height: 86, background: '#F9FAFB' }}>
+              <div style={{ display: 'flex', gap: 14 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 8, background: '#E5E7EB' }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ height: 14, width: '60%', background: '#E5E7EB', borderRadius: 4, marginBottom: 8 }} />
+                  <div style={{ height: 28, width: '40%', background: '#D1D5DB', borderRadius: 4 }} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   const { summary, ward_anomalies = {}, monthly_tonnage_history = [], contractors = [] } = data;
 
-  const getBadgeColor = (severity: string) => {
-    switch (severity) {
-      case 'high': return 'bg-status-flagged/10 text-status-flagged border border-status-flagged/30';
-      case 'medium': return 'bg-status-review/10 text-status-review border border-status-review/30';
-      case 'low': return 'bg-status-verified/10 text-status-verified border border-status-verified/30';
-      default: return 'bg-gray-100 text-gray-700 border border-gray-300';
-    }
+  const metricCards = [
+    {
+      label: 'Locked Weighs',
+      value: summary.total_weighs,
+      icon: Scale,
+      iconBg: 'bg-blue-50',
+      iconColor: 'text-blue-600',
+    },
+    {
+      label: 'GPS Violations',
+      value: summary.flagged_weighs,
+      icon: ShieldAlert,
+      iconBg: 'bg-rose-50',
+      iconColor: 'text-rose-600',
+    },
+    {
+      label: 'ML Under Review',
+      value: summary.under_review_weighs,
+      icon: AlertTriangle,
+      iconBg: 'bg-amber-50',
+      iconColor: 'text-amber-600',
+    },
+    {
+      label: 'SLA Breaches',
+      value: `${summary.breached_repairs}/${summary.total_repairs}`,
+      icon: TrendingDown,
+      iconBg: 'bg-rose-50',
+      iconColor: 'text-rose-600',
+    },
+  ];
+
+  const getContractorGrade = (c: any) => {
+    const fraudCount = c.fraud_flags_confirmed || 0;
+    if (c.id === 'bvg-india' || fraudCount >= 2) return { grade: 'F', score: 32, icon: 'sentiment_dissatisfied', color: 'text-error' };
+    if (c.id === 'antony-waste' || fraudCount === 1) return { grade: 'D-', score: 65, icon: 'sentiment_neutral', color: 'text-on-surface' };
+    return { grade: 'B', score: 85, icon: 'sentiment_satisfied', color: 'text-primary' };
   };
 
   return (
-    <div className="space-y-8">
-      {/* Editorial Title Box */}
-      <div className="border-b-2 border-dossier-text pb-6">
-        <div className="flex flex-col md:flex-row md:items-baseline md:justify-between">
-          <h1 className="font-serif text-3xl font-black tracking-tight uppercase text-dossier-text">
-            NMC Municipal Audit & Verification Log
-          </h1>
-          <span className="font-mono text-[10px] text-dossier-muted uppercase mt-1 md:mt-0 font-bold">
-            Nagpur Municipal Corporation • Document Ref: NMC-2026-V8
-          </span>
-        </div>
-        
-        {/* Paragraph lead */}
-        <div className="mt-4 bg-status-flagged/5 border border-status-flagged/25 p-4 font-mono text-xs text-dossier-text">
-          <div className="flex items-center gap-2 font-bold text-status-flagged mb-1 uppercase text-[11px]">
-            <AlertTriangle size={15} />
-            <span>Forensic Notice: Anomaly Trends in Tonnage Billings</span>
+    <div className="flex flex-col gap-6 w-full text-slate-900">
+
+      {/* ── Hero Section ──────────────────────────────────────────── */}
+      <section className="mb-10 relative">
+        {premiumVibe && (
+          <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
+            <div className="absolute -top-10 -right-10 w-60 h-60 bg-blue-300 rounded-full blur-[100px]" />
+            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-orange-200 rounded-full blur-[80px]" />
           </div>
-          <p className="leading-relaxed font-sans text-xs text-dossier-text mt-1.5 font-medium">
-            Historical audit records indicate an unexplained monthly drop of 6,400+ MT in waste collection billings between April and July 2026. 
-            Concurrently, allegations persist that waste collection haulers (Antony Waste, BVG India) inflated billings by mixing sand/boulders. 
-            All weighbridge logs and road restoration SLA projects are locked below via tamper-proof on-chain ledgers for public accountability.
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start relative z-10">
+          <div className="md:col-span-8">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 border border-blue-200/60 mb-4">
+              <span className="material-symbols-outlined text-[16px] text-blue-600">lock</span>
+              <span className="text-[11px] font-bold tracking-widest text-blue-700 uppercase">Verified Public Data</span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 mt-3 mb-2">
+              See How Your City is Doing
+            </h1>
+            <p className="text-sm text-slate-500 leading-relaxed max-w-2xl font-normal text-balance">
+              Radically transparent, real-time metrics on municipal performance. We believe public data should be accessible, organized, and easy to understand.<span className="text-xs font-mono font-medium text-slate-400 ml-1">(Ref: NMC-2026-V8)</span>
+            </p>
+          </div>
+          <div className="md:col-span-4">
+            <SystemStatusDossier />
+          </div>
+        </div>
+      </section>
+
+      {/* ── Alert Banner ──────────────────────────────────────────── */}
+      <div className="bg-rose-50 border border-rose-200 rounded-lg px-4 py-3 flex gap-3 items-start shadow-sm mb-6">
+        <span className="material-symbols-outlined text-rose-600 mt-0.5">warning</span>
+        <div>
+          <div className="text-xs font-bold uppercase tracking-wider text-rose-700">
+            Forensic Notice: Tonnage Billing Anomalies Detected
+          </div>
+          <p className="text-xs text-rose-900/90 leading-normal mt-0.5 m-0">
+            Unexplained 6,400+ MT drop in waste collection billings (April–July 2026). Haulers Antony Waste and BVG India
+            face allegations of inflated billings. All records are tamper-proof and locked on-chain.
           </p>
         </div>
       </div>
 
-      {/* Grid of Minimal Ledger Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 border-t border-b border-dossier-border divide-y lg:divide-y-0 lg:divide-x divide-dossier-border bg-dossier-card">
-        <div className="p-4 flex flex-col justify-between h-24">
-          <span className="font-mono text-[10px] uppercase text-dossier-muted tracking-wider font-bold">Locked Weighs</span>
-          <div className="flex items-baseline gap-2">
-            <span className="font-serif text-3xl font-black text-dossier-text">{summary.total_weighs}</span>
-            <span className="font-mono text-[9px] text-dossier-muted uppercase font-bold">Sealed</span>
-          </div>
-        </div>
-
-        <div className="p-4 flex flex-col justify-between h-24">
-          <span className="font-mono text-[10px] uppercase text-status-flagged tracking-wider font-bold">GPS Violations</span>
-          <div className="flex items-baseline gap-2">
-            <span className="font-serif text-3xl font-black text-status-flagged">{summary.flagged_weighs}</span>
-            <span className="font-mono text-[9px] text-status-flagged/80 uppercase font-bold">Inquiry</span>
-          </div>
-        </div>
-
-        <div className="p-4 flex flex-col justify-between h-24">
-          <span className="font-mono text-[10px] uppercase text-status-review tracking-wider font-bold">ML Review</span>
-          <div className="flex items-baseline gap-2">
-            <span className="font-serif text-3xl font-black text-status-review">{summary.under_review_weighs}</span>
-            <span className="font-mono text-[9px] text-status-review/80 uppercase font-bold">Outliers</span>
-          </div>
-        </div>
-
-        <div className="p-4 flex flex-col justify-between h-24">
-          <span className="font-mono text-[10px] uppercase text-dossier-muted tracking-wider font-bold">Road Restorations</span>
-          <div className="flex items-baseline gap-2">
-            <span className="font-serif text-3xl font-black text-dossier-text">{summary.breached_repairs} / {summary.total_repairs}</span>
-            <span className="font-mono text-[9px] text-status-flagged uppercase font-bold">Breached</span>
-          </div>
-        </div>
+      {/* ── 4 Hero Metric Cards ───────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {metricCards.map(card => {
+          const Icon = card.icon;
+          return (
+            <div key={card.label} className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl p-5 shadow-sm flex items-center gap-4">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${card.iconBg} ${card.iconColor}`}>
+                <Icon size={20} />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">{card.label}</div>
+                <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 tabular-nums leading-none">{card.value}</div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Contractor Summary Cards */}
-      {contractors.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="font-mono text-xs text-dossier-muted uppercase font-bold tracking-wider">
-              Audited Municipal Contractors
-            </span>
-            <button
-              onClick={() => onNavigate("contractors")}
-              className="text-xs font-mono text-status-verified font-bold uppercase hover:underline flex items-center gap-1 cursor-pointer"
-            >
-              <span>View Detailed Profiles</span>
-              <ArrowRight size={12} />
+      {/* ── Map + Scorecards (8/4 split) ──────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+
+        {/* Map Panel (8 cols) */}
+        <section className="md:col-span-8 bg-white/95 backdrop-blur-sm rounded-xl shadow-sm p-6 flex flex-col gap-4 border border-slate-200/80">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-lg font-bold tracking-tight text-slate-900 m-0">Ward Performance Map</h2>
+            <button className="text-primary text-sm font-semibold flex items-center gap-1 hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer">
+              View Details <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
             </button>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {contractors.map((c: any) => (
-              <div 
-                key={c.id} 
-                onClick={() => onNavigate("contractors")}
-                className="border border-dossier-border p-4 bg-dossier-card hover:border-dossier-text transition-all cursor-pointer flex justify-between items-center group"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Building size={14} className="text-dossier-muted group-hover:text-dossier-text" />
-                    <h3 className="font-serif font-black text-sm uppercase text-dossier-text">{c.name}</h3>
-                  </div>
-                  <div className="mt-2 flex gap-4 font-mono text-[10px] text-dossier-muted">
-                    <span>Tonnage: <strong className="text-dossier-text font-bold">{c.total_tonnage_mt?.toLocaleString() || 0} MT</strong></span>
-                    <span>Claims: <strong className="text-dossier-text font-bold">₹{((c.claims_inr || 0) / 10000000).toFixed(2)} Cr</strong></span>
-                  </div>
-                </div>
 
-                <div className="text-right">
-                  {(c.fraud_flags_confirmed || 0) > 0 ? (
-                    <span className="inline-flex items-center gap-1 font-mono text-[9px] font-bold px-2 py-0.5 border border-status-flagged text-status-flagged bg-status-flagged/10">
-                      <ShieldAlert size={10} />
-                      {c.fraud_flags_confirmed} Ruled Fraud
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 font-mono text-[9px] font-bold px-2 py-0.5 border border-status-verified text-status-verified bg-status-verified/10">
-                      Clean Audit
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Map and Details Block */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Leaflet Nagpur Map Panel */}
-        <div className="lg:col-span-7 border border-dossier-border p-6 bg-dossier-card flex flex-col justify-between">
-          <div>
-            <h3 className="font-serif text-lg font-extrabold uppercase tracking-tight text-dossier-text">Nagpur Zones Administrative Map</h3>
-            <p className="text-[10px] text-dossier-muted font-mono mt-0.5 uppercase font-bold">Interactive Leaflet OpenStreetMap telemetry view</p>
-          </div>
-
-          <div className="my-6 relative border border-dossier-border rounded-none overflow-hidden h-80 z-10">
+          <div className="relative w-full h-[400px] rounded-lg overflow-hidden bg-white flex items-center justify-center border-2 border-slate-300 shadow-inner isolate z-10">
             <MapContainer center={[21.1458, 79.0882]} zoom={12} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
               <TileLayer
                 url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
                 attribution='&copy; OpenStreetMap contributors &copy; CARTO'
               />
-              
-              {/* Optional Nagpur City Boundary Outline */}
               {nagpurBoundary && (
                 <GeoJSON
                   data={nagpurBoundary as any}
-                  pathOptions={{
-                    color: "var(--color-dossier-text)",
-                    fill: false,
-                    weight: 1.5,
-                    dashArray: "4, 4"
-                  }}
+                  pathOptions={{ color: '#9CA3AF', fill: false, weight: 1.5, dashArray: '4,4' }}
                 />
               )}
-
-              {zonesData.map((zone) => {
-                const auditData = ward_anomalies[zone.name] || { anomalies: 0, severity: "low", details: "Normal compliance parameters." };
-                let color = "#1b4d3e"; // Forest Green (verified)
-                if (auditData.severity === 'high') {
-                  color = "#9e2a2b"; // Crimson (flagged)
-                } else if (auditData.severity === 'medium') {
-                  color = "#c97a1b"; // Ochre (review)
-                }
-
-                // Scale circle marker size based on alert count (min radius 15px)
-                const radius = 15 + (auditData.anomalies * 8);
+              {zonesData.map(zone => {
+                const auditData = ward_anomalies[zone.name] || { anomalies: 0, severity: 'low', details: 'Normal compliance parameters.' };
+                let color = '#059669';
+                if (auditData.severity === 'high') color = '#DC2626';
+                else if (auditData.severity === 'medium') color = '#D97706';
+                const radius = 15 + auditData.anomalies * 8;
                 const isSelected = selectedZone === zone.name;
-
                 return (
                   <CircleMarker
                     key={zone.name}
                     center={zone.coords as any}
-                    pathOptions={{
-                      color: color,
-                      fillColor: color,
-                      fillOpacity: isSelected ? 0.55 : 0.22,
-                      weight: isSelected ? 3.5 : 1.5,
-                    }}
+                    pathOptions={{ color, fillColor: color, fillOpacity: isSelected ? 0.55 : 0.22, weight: isSelected ? 3 : 1.5 }}
                     radius={radius}
-                    eventHandlers={{
-                      click: () => setSelectedZone(zone.name)
-                    }}
+                    eventHandlers={{ click: () => setSelectedZone(zone.name) }}
                   >
                     <Popup>
-                      <div className="font-mono text-xs space-y-1">
-                        <div className="font-bold text-sm uppercase">{zone.name}</div>
-                        <div className="text-[10px] text-gray-600 uppercase">
-                          Severity: <strong className={auditData.severity === 'high' ? 'text-red-700' : auditData.severity === 'medium' ? 'text-amber-700' : 'text-green-700'}>{auditData.severity}</strong>
-                        </div>
-                        <div className="text-[10px] text-gray-700">
-                          {auditData.anomalies} Anomalies Logged
-                        </div>
-                        <div className="text-[10px] text-gray-600 font-sans border-t border-gray-200 pt-1 mt-1">
-                          {auditData.details}
-                        </div>
+                      <div className="font-sans text-xs">
+                        <strong>{zone.name}</strong>
+                        <div style={{ marginTop: 4, color: '#6B7280' }}>Severity: {auditData.severity}</div>
+                        <div style={{ color: '#374151' }}>{auditData.anomalies} anomalies</div>
+                        <div style={{ marginTop: 6, color: '#6B7280', fontSize: 11 }}>{auditData.details}</div>
                       </div>
                     </Popup>
-                    <LeafletTooltip permanent direction="center" className="leaflet-tooltip-custom border-none bg-transparent shadow-none font-mono text-[8px] font-bold text-black uppercase pointer-events-none">
-                      {zone.name}
+                    <LeafletTooltip direction="top" offset={[0, -10]} opacity={1}>
+                      <div className="font-sans text-center p-1">
+                        <div className="font-semibold text-xs text-slate-900 mb-1">{zone.name}</div>
+                        <span className={`badge ${auditData.severity === 'high' ? 'badge-err' : auditData.severity === 'medium' ? 'badge-warn' : 'badge-ok'} text-[10px] font-semibold tracking-wide uppercase`}>
+                          {auditData.severity} Severity
+                        </span>
+                      </div>
                     </LeafletTooltip>
                   </CircleMarker>
                 );
               })}
             </MapContainer>
 
-            {/* Print Map Legend */}
-            <div className="absolute bottom-4 right-2 bg-dossier-bg border border-dossier-border p-2 text-[9px] font-mono space-y-1 z-[1000]">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 bg-status-flagged/20 border border-status-flagged inline-block"></span>
-                <span>Flagged (SLA / Telemetry)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 bg-status-review/20 border border-status-review inline-block"></span>
-                <span>Under Review (ML Outlier)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 bg-status-verified/20 border border-status-verified inline-block"></span>
-                <span>Verified (Clean Ledger)</span>
-              </div>
+            {/* Legend inside map container */}
+            <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur border border-slate-200 rounded p-2 text-xs flex flex-col gap-1 z-[1000]">
+              {[['#DC2626','Flagged'],['#D97706','Under Review'],['#059669','Verified']].map(([c,l]) => (
+                <div key={l} className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c }} />
+                  <span className="text-slate-600 font-medium">{l}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="text-[10px] font-mono text-dossier-muted flex justify-between items-center border-t border-dossier-border pt-3 font-bold">
-            <span>MAP SYSTEM: LEAFLET-OSM</span>
-            <span>Bhandewadi Dumping coordinates: 21.1408° N, 79.1622° E</span>
+          <div className="mt-2 text-xs font-mono text-slate-500">
+            Bhandewadi dump yard: 21.1408°N 79.1622°E · Zone centers are approximate
           </div>
-        </div>
+        </section>
 
-        {/* Zone Investigation Dossier Log */}
-        <div className="lg:col-span-5 flex flex-col justify-between">
-          <div className="border border-dossier-border p-6 bg-dossier-card h-full flex flex-col justify-between">
-            <div>
-              <h3 className="font-serif text-lg font-extrabold uppercase tracking-tight text-dossier-text">Zone Investigation Log</h3>
-              <div className="rule-line my-3"></div>
-              
-              {selectedZone ? (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center pb-2">
-                    <span className="font-serif text-xl font-bold tracking-tight text-dossier-text">{selectedZone}</span>
-                    <span className={`font-mono text-[9px] uppercase px-2 py-0.5 font-bold ${getBadgeColor(ward_anomalies[selectedZone]?.severity || 'low')}`}>
-                      {ward_anomalies[selectedZone]?.severity || 'low'} severity
-                    </span>
+        {/* Right Column: Scorecards & Zone Detail (4 cols) */}
+        <section className="md:col-span-4 flex flex-col gap-6">
+          
+          {/* Zone Detail Panel */}
+          <div className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl p-6 shadow-sm text-slate-900 flex flex-col gap-4 hover:-translate-y-[2px] transition-transform duration-300">
+            <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2 m-0">ZONE INVESTIGATION</h4>
+            
+            {selectedZone ? (
+              <div className="flex-1 flex flex-col">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-xl text-slate-900 font-bold tracking-tight">{selectedZone}</span>
+                  {(() => {
+                    const sev = ward_anomalies[selectedZone]?.severity || 'low';
+                    const cls = sev === 'high' ? 'bg-red-100 text-red-800' : sev === 'medium' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800';
+                    return <span className={`px-2.5 py-1 rounded text-[10px] font-semibold tracking-wide uppercase ${cls}`}>{sev} severity</span>;
+                  })()}
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">ANOMALIES</div>
+                    <div className="text-sm text-slate-900 font-bold">{ward_anomalies[selectedZone]?.anomalies || 0} reports</div>
                   </div>
-
-                  <div className="space-y-3.5 font-mono text-xs">
-                    <div>
-                      <span className="text-dossier-muted block uppercase text-[10px] font-bold">Registered Anomalies:</span>
-                      <span className="font-bold text-dossier-text">
-                        {ward_anomalies[selectedZone]?.anomalies || 0} Contractor Anomaly Reports
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-dossier-muted block uppercase text-[10px] font-bold">Audit Narrative:</span>
-                      <p className="text-dossier-text leading-relaxed font-sans text-xs mt-1.5 font-medium">
-                        {ward_anomalies[selectedZone]?.details || "Normal operating parameters."}
-                      </p>
-                    </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">AUDIT NARRATIVE</div>
+                    <p className="text-[13px] text-slate-600 font-medium leading-relaxed m-0">
+                      {ward_anomalies[selectedZone]?.details || 'Normal operating parameters.'}
+                    </p>
                   </div>
                 </div>
-              ) : (
-                <div className="h-48 flex flex-col items-center justify-center text-center font-mono text-[11px] text-dossier-muted space-y-2 py-6">
-                  <Database size={20} className="text-dossier-border" />
-                  <span className="font-bold">Select an administrative zone on the Leaflet map to display verified telemetry checks and contract status.</span>
-                </div>
-              )}
-            </div>
 
-            {selectedZone && (ward_anomalies[selectedZone]?.anomalies || 0) > 0 && (
-              <div className="pt-4 border-t border-dashed border-dossier-border mt-4">
-                <button 
-                  onClick={() => {
-                    if (selectedZone === "Dharampeth") {
-                      onNavigate("flags", "WB-2026-8021");
-                    } else if (selectedZone === "Gandhi Baugh") {
-                      onNavigate("flags", "WB-2026-9100");
-                    } else {
-                      onNavigate("flags");
-                    }
-                  }}
-                  className="w-full flex items-center justify-between border border-dossier-text text-dossier-text text-xs font-mono font-bold py-2 px-3 hover:bg-dossier-text/5 transition-colors uppercase cursor-pointer"
-                >
-                  <span>Open Flagged Evidence Folder</span>
-                  <ArrowRight size={14} />
-                </button>
+                {(ward_anomalies[selectedZone]?.anomalies || 0) > 0 && (
+                  <button
+                    onClick={() => {
+                      if (selectedZone === 'Dharampeth') onNavigate('flags', 'WB-2026-8021');
+                      else if (selectedZone === 'Gandhi Baugh') onNavigate('flags', 'WB-2026-9100');
+                      else onNavigate('flags');
+                    }}
+                    className="mt-4 w-full bg-error-container text-on-error-container font-semibold text-label-bold py-2 rounded flex justify-center items-center gap-2 hover:opacity-90 tracking-wide uppercase"
+                  >
+                    <span>View Evidence</span>
+                    <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center text-secondary py-4">
+                <span className="material-symbols-outlined text-[32px] opacity-50">map</span>
+                <p className="text-label-sm font-medium m-0">Select a zone on the map to view its details.</p>
               </div>
             )}
           </div>
-        </div>
+
+          {/* Contractor Scorecards */}
+          {contractors.map((c: any) => {
+            const { grade, score, icon, color } = getContractorGrade(c);
+            const actualColor = color === 'text-error' ? 'text-red-600' : color === 'text-primary' ? 'text-blue-600' : 'text-slate-900';
+            return (
+              <div key={c.id} onClick={() => onNavigate('contractors')} className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl p-6 shadow-sm text-slate-900 flex flex-col gap-4 hover:-translate-y-[2px] transition-transform duration-300 cursor-pointer">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 m-0">CONTRACTOR AUDIT</p>
+                    <h4 className="text-sm text-slate-900 font-bold tracking-tight mt-1 m-0">{c.name}</h4>
+                  </div>
+                  <span className={`material-symbols-outlined ${actualColor}`} style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>
+                </div>
+                <div className="flex items-center gap-6 mt-4">
+                  <div className={`text-4xl font-extrabold tracking-tight flex-shrink-0 ${actualColor}`}>
+                    {grade}
+                  </div>
+                  <div className="relative w-20 h-20 ml-auto">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                      <path className="text-slate-200" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
+                      <path className={actualColor} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray={`${score}, 100`} strokeLinecap="round" strokeWidth="3" />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-sm font-bold text-slate-900">{score}%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </section>
       </div>
 
-      {/* Historical Drop Chart */}
-      <div className="border border-dossier-border p-6 bg-dossier-card">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center pb-4 border-b border-dossier-border mb-4">
+      {/* ── Tonnage Trend Chart ───────────────────────────────────── */}
+      <div className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl p-6 shadow-sm text-slate-900 mb-6">
+        <div className="flex justify-between items-start mb-6">
           <div>
-            <h3 className="font-serif text-lg font-extrabold uppercase tracking-tight flex items-center gap-2 text-dossier-text">
-              <TrendingDown className="text-status-flagged" />
-              Nagpur Waste Collection Tonnage Collapse (April–July 2026)
+            <h3 className="text-xl text-slate-900 font-bold tracking-tight flex items-center gap-2 m-0">
+              <TrendingDown size={20} className="text-red-600" />
+              Waste Collection Tonnage (Apr–Jul 2026)
             </h3>
-            <p className="text-[10px] text-dossier-muted font-mono mt-0.5 uppercase font-bold">
-              Official monthly tonnage invoicing vs. target benchmark
-            </p>
+            <p className="text-sm text-slate-500 font-medium m-0 mt-1">Monthly invoiced tonnage vs. target benchmark</p>
           </div>
-          <div className="mt-2 md:mt-0 font-mono text-[10px] border border-status-flagged text-status-flagged px-2.5 py-1 uppercase bg-status-flagged/5 font-bold">
-            6,400+ MT DROP REGISTERED IN REPORTING PERIOD
-          </div>
+          <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-[10px] font-semibold tracking-wide uppercase">6,400+ MT Drop</span>
         </div>
 
-        <div className="h-64 mt-6">
+        <div className="h-[260px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={monthly_tonnage_history} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <AreaChart data={monthly_tonnage_history} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="tonnageGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-status-flagged)" stopOpacity={0.12}/>
-                  <stop offset="95%" stopColor="var(--color-status-flagged)" stopOpacity={0}/>
+                  <stop offset="5%"  stopColor="var(--color-error)" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="var(--color-error)" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(42,42,42,0.08)"/>
-              <XAxis dataKey="month" stroke="rgba(42,42,42,0.5)" tickLine={false} style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 'bold' }} />
-              <YAxis stroke="rgba(42,42,42,0.5)" tickLine={false} style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 'bold' }} tickFormatter={(val) => `${val/1000}k MT`} />
-              <Tooltip 
-                formatter={(value: any, name: any, item: any) => {
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-outline-variant)" />
+              <XAxis dataKey="month" stroke="var(--color-secondary)" tickLine={false} style={{ fontSize: 11, fontFamily: 'var(--font-sans)' }} />
+              <YAxis stroke="var(--color-secondary)" tickLine={false} style={{ fontSize: 11, fontFamily: 'var(--font-sans)' }} tickFormatter={v => `${v/1000}k`} />
+              <Tooltip
+                formatter={(value: any, _: any, item: any) => {
                   const spend = item.payload.spend_inr ? ` (₹${(item.payload.spend_inr/10000000).toFixed(2)} Cr)` : '';
                   return [`${Number(value).toLocaleString()} MT${spend}`, 'Billed Tonnage'];
                 }}
-                contentStyle={{ 
-                  backgroundColor: 'var(--dossier-card)', 
-                  borderColor: 'var(--dossier-border)',
-                  color: 'var(--dossier-text)',
-                  fontFamily: 'monospace',
-                  fontSize: '11px',
-                  borderRadius: '0px',
-                  boxShadow: 'none'
-                }} 
+                contentStyle={{ background: 'var(--color-surface-container-lowest)', border: '1px solid var(--color-outline-variant)', borderRadius: 8, fontSize: 12, fontFamily: 'var(--font-sans)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
               />
-              <Area type="monotone" dataKey="tonnage_mt" stroke="var(--color-status-flagged)" strokeWidth={1.5} fillOpacity={1} fill="url(#tonnageGrad)" name="Waste Billed (MT)" />
+              <Area type="monotone" dataKey="tonnage_mt" stroke="var(--color-error)" strokeWidth={2} fillOpacity={1} fill="url(#tonnageGrad)" name="Waste Billed (MT)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
-      
-      {/* Exhibit indexes */}
-      <div className="grid grid-cols-1 md:grid-cols-3 border border-dossier-border divide-y md:divide-y-0 md:divide-x divide-dossier-border font-mono text-xs">
-        <div className="p-5 bg-dossier-card flex flex-col justify-between">
-          <div>
-            <span className="text-dossier-muted block uppercase text-[10px] font-bold">EXHIBIT A: TELEMETRY MISMATCH</span>
-            <p className="mt-2.5 font-serif text-sm font-bold text-dossier-text">Audit logs detailing weighbridge tickets registered with zero corresponding dump site GPS hits.</p>
-          </div>
-          <button onClick={() => onNavigate("flags")} className="mt-4 flex items-center justify-between text-status-flagged font-bold uppercase hover:underline cursor-pointer">
-            <span>Inspect Exhibits</span>
-            <ArrowRight size={14} />
-          </button>
-        </div>
 
-        <div className="p-5 bg-dossier-card flex flex-col justify-between">
-          <div>
-            <span className="text-dossier-muted block uppercase text-[10px] font-bold">EXHIBIT B: CONTRACTOR PROFILES</span>
-            <p className="mt-2.5 font-serif text-sm font-bold text-dossier-text">Daily tonnage historical curves for waste collectors with statistical anomaly markers.</p>
+      {/* ── Quick-nav exhibit cards ───────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          { label: 'Exhibit A', title: 'GPS Telemetry Mismatch', desc: 'Weighbridge tickets with zero dump-site GPS hits', view: 'flags', icon: 'gavel', color: 'text-red-600', bg: 'bg-red-50' },
+          { label: 'Exhibit B', title: 'Contractor Billing Profiles', desc: 'Daily tonnage curves with anomaly markers', view: 'contractors', icon: 'monitoring', color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Exhibit C', title: 'Road SLA Restorations', desc: 'Amrut Yojana repairs under citizen review', view: 'repairs', icon: 'construction', color: 'text-slate-700', bg: 'bg-slate-100' },
+        ].map(card => (
+          <div
+            key={card.label}
+            className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl p-6 shadow-sm text-slate-900 hover:-translate-y-1 transition-transform cursor-pointer flex flex-col"
+            onClick={() => onNavigate(card.view)}
+          >
+            <div className="flex justify-between items-start mb-2">
+              <span className={`text-[10px] font-semibold px-2 py-1 rounded uppercase tracking-wide ${card.color} ${card.bg}`}>
+                {card.label}
+              </span>
+              <span className={`material-symbols-outlined ${card.color}`}>{card.icon}</span>
+            </div>
+            <h3 className="text-sm text-slate-900 font-bold tracking-tight mb-1 m-0">{card.title}</h3>
+            <p className="text-sm text-slate-500 font-medium mb-4 m-0 flex-1">{card.desc}</p>
+            <div className={`mt-auto flex items-center gap-1 text-[11px] font-semibold tracking-wide ${card.color}`}>
+              <span>View Evidence</span><span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+            </div>
           </div>
-          <button onClick={() => onNavigate("contractors")} className="mt-4 flex items-center justify-between text-status-verified font-bold uppercase hover:underline cursor-pointer">
-            <span>Inspect Contractors</span>
-            <ArrowRight size={14} />
-          </button>
-        </div>
-
-        <div className="p-5 bg-dossier-card flex flex-col justify-between">
-          <div>
-            <span className="text-dossier-muted block uppercase text-[10px] font-bold">EXHIBIT C: ROAD RESTORATIONS</span>
-            <p className="mt-2.5 font-serif text-sm font-bold text-dossier-text">Amrut Yojana post-excavation sewer restorations under active citizen complaint audit check.</p>
-          </div>
-          <button onClick={() => onNavigate("repairs")} className="mt-4 flex items-center justify-between text-status-review font-bold uppercase hover:underline cursor-pointer">
-            <span>Inspect SLA Tracker</span>
-            <ArrowRight size={14} />
-          </button>
-        </div>
-      </div>
-      
-      {/* Map coordinate citation caption */}
-      <div className="text-center font-mono text-[9px] text-dossier-muted uppercase font-bold pt-4">
-        Zone center points are approximate — based on locality data, not official NMC boundary coordinates.
+        ))}
       </div>
     </div>
   );
 };
-

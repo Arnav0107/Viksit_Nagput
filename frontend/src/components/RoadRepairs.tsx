@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { CheckCircle, Clock, MapPin, MessageSquare, Key, AlertTriangle, Send, X, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { CheckCircle, Clock, MapPin, MessageSquare, Key, AlertTriangle, Send, X, ShieldCheck, FileSpreadsheet, Info } from 'lucide-react';
 
 interface RoadRepair {
   id: string;
@@ -25,13 +25,36 @@ interface RoadRepairsProps {
 
 const STORAGE_KEY = 'auditchain_reported_repairs';
 
+const BeforeAfterSlider: React.FC<{ before: string; after: string; label: string }> = ({ before, after, label }) => {
+  const [sliderPos, setSliderPos] = useState(50);
+  return (
+    <div className="relative w-full h-[300px] md:h-[480px] bg-surface-container overflow-hidden isolate select-none">
+      <img src={after} alt="After" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+      <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none" style={{ width: `${sliderPos}%` }}>
+        <img src={before} alt="Before" className="absolute inset-0 w-full h-full object-cover max-w-none pointer-events-none" style={{ width: '100vw', maxWidth: '100%' }} />
+      </div>
+      <div className="absolute top-0 bottom-0 w-1 bg-surface-container-lowest pointer-events-none shadow-ambient" style={{ left: `calc(${sliderPos}% - 2px)` }}>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-surface-container-lowest rounded-full shadow-md flex items-center justify-center pointer-events-auto">
+          <span className="material-symbols-outlined text-[16px] text-secondary">code</span>
+        </div>
+      </div>
+      <input type="range" min="0" max="100" value={sliderPos} onChange={e => setSliderPos(Number(e.target.value))} className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-20" />
+      <div className="absolute top-4 left-4 bg-surface-container-lowest/80 backdrop-blur px-3 py-1.5 rounded-full text-label-sm font-semibold tracking-wide text-on-surface shadow-sm z-10 pointer-events-none uppercase">Before</div>
+      <div className="absolute top-4 right-4 bg-surface-container-lowest/80 backdrop-blur px-3 py-1.5 rounded-full text-label-sm font-semibold tracking-wide text-on-surface shadow-sm z-10 pointer-events-none uppercase">After</div>
+      <div className="absolute bottom-4 left-4 bg-surface-container-lowest/90 backdrop-blur px-3 py-1.5 rounded text-xs font-mono font-medium text-on-surface-variant shadow-sm z-10 pointer-events-none flex items-center gap-1.5">
+        <span className="material-symbols-outlined text-[16px]">location_on</span>
+        {label}
+      </div>
+    </div>
+  );
+};
+
 export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthError, onPushWeb3Log }) => {
   const [repairs, setRepairs] = useState<RoadRepair[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [sealErrors, setSealErrors] = useState<{ [repairId: string]: string }>({});
 
-  // Track reported repairs across sessions / reloads
   const [reportedIds, setReportedIds] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -41,7 +64,6 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
     }
   });
 
-  // Active inline complaint submission state
   const [activeComplaintId, setActiveComplaintId] = useState<string | null>(null);
   const [complaintText, setComplaintText] = useState<string>('');
   const [complaintErrors, setComplaintErrors] = useState<{ [repairId: string]: string }>({});
@@ -61,19 +83,13 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
     }
   };
 
-  useEffect(() => {
-    fetchRepairs();
-  }, []);
+  useEffect(() => { fetchRepairs(); }, []);
 
   const markAsReported = (repairId: string) => {
     setReportedIds((prev) => {
       if (prev.includes(repairId)) return prev;
       const next = [...prev, repairId];
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch (e) {
-        console.error("Failed to save reported ID to localStorage", e);
-      }
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch (e) {}
       return next;
     });
   };
@@ -94,81 +110,45 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
   const handleFileComplaint = async (repairId: string) => {
     const trimmed = complaintText.trim();
     if (trimmed.length < 10) {
-      setComplaintErrors((prev) => ({
-        ...prev,
-        [repairId]: "Complaint description must be at least 10 characters long."
-      }));
+      setComplaintErrors((prev) => ({ ...prev, [repairId]: "Complaint description must be at least 10 characters long." }));
       return;
     }
-
     setActioningId(repairId);
     setComplaintErrors((prev) => ({ ...prev, [repairId]: '' }));
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`/api/road-repairs/${repairId}/complaint`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ description: trimmed })
+        method: 'POST', headers, body: JSON.stringify({ description: trimmed })
       });
-
       const data = await res.json().catch(() => ({}));
-
+      
       if (res.status === 409) {
         markAsReported(repairId);
         setActiveComplaintId(null);
-        setComplaintErrors((prev) => ({
-          ...prev,
-          [repairId]: "You've already submitted a report for this case."
-        }));
+        setComplaintErrors((prev) => ({ ...prev, [repairId]: "You've already submitted a report for this case." }));
         return;
       }
-
       if (res.status === 403) {
-        setComplaintErrors((prev) => ({
-          ...prev,
-          [repairId]: data.detail || "Internal officer and auditor accounts are prohibited from filing complaints."
-        }));
+        setComplaintErrors((prev) => ({ ...prev, [repairId]: data.detail || "Internal officer and auditor accounts are prohibited from filing complaints." }));
         return;
       }
-
       if (res.status === 400) {
-        setComplaintErrors((prev) => ({
-          ...prev,
-          [repairId]: data.detail || "Complaint description must be at least 10 characters."
-        }));
+        setComplaintErrors((prev) => ({ ...prev, [repairId]: data.detail || "Complaint description must be at least 10 characters." }));
         return;
       }
-
       if (!res.ok) {
-        setComplaintErrors((prev) => ({
-          ...prev,
-          [repairId]: data.detail || "Failed to submit complaint. Please try again."
-        }));
+        setComplaintErrors((prev) => ({ ...prev, [repairId]: data.detail || "Failed to submit complaint. Please try again." }));
         return;
       }
 
       if (data.status === 'success') {
         markAsReported(repairId);
-        setComplaintSuccesses((prev) => ({
-          ...prev,
-          [repairId]: "Complaint registered successfully! Telemetry updated."
-        }));
+        setComplaintSuccesses((prev) => ({ ...prev, [repairId]: "Complaint registered successfully! Telemetry updated." }));
         setActiveComplaintId(null);
         setComplaintText('');
-        
-        onPushWeb3Log?.(
-          "Citizen Registry", 
-          `Complaint recorded on ${repairId}. Total: ${data.complaints_count} reports. SLA Status: ${data.repair_status?.toUpperCase()}`, 
-          data.repair_status === 'breached' ? 'warn' : 'info'
-        );
-
+        onPushWeb3Log?.("Citizen Registry", `Complaint recorded on ${repairId}. Total: ${data.complaints_count} reports. SLA Status: ${data.repair_status?.toUpperCase()}`, data.repair_status === 'breached' ? 'warn' : 'info');
         fetchRepairs();
-
-        // Clear success message after 6 seconds
         setTimeout(() => {
           setComplaintSuccesses((prev) => {
             const next = { ...prev };
@@ -178,11 +158,7 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
         }, 6000);
       }
     } catch (err) {
-      console.error("Error filing complaint", err);
-      setComplaintErrors((prev) => ({
-        ...prev,
-        [repairId]: "Network error occurred while submitting complaint."
-      }));
+      setComplaintErrors((prev) => ({ ...prev, [repairId]: "Network error occurred while submitting complaint." }));
     } finally {
       setActioningId(null);
     }
@@ -193,56 +169,35 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
     setSealErrors((prev) => ({ ...prev, [repairId]: '' }));
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch('/api/blockchain/lock', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ type: 'road', id: repairId, disposition: 'cleared' })
+        method: 'POST', headers, body: JSON.stringify({ type: 'road', id: repairId, disposition: 'cleared' })
       });
-
+      
       if (res.status === 401 || res.status === 403) {
         const errData = await res.json().catch(() => ({}));
         onAuthError?.(errData.detail || 'Authorization failed (401/403). Only auditors can seal records on-chain.');
         return;
       }
-
       if (res.status === 503) {
         const errData = await res.json().catch(() => ({}));
-        setSealErrors((prev) => ({
-          ...prev,
-          [repairId]: errData.detail || "Blockchain node unavailable — is Anvil running?"
-        }));
+        setSealErrors((prev) => ({ ...prev, [repairId]: errData.detail || "Blockchain node unavailable — is Anvil running?" }));
         onPushWeb3Log?.("Web3 Error", "Blockchain RPC node at :8545 unreachable.", "warn");
         return;
       }
-
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        setSealErrors((prev) => ({
-          ...prev,
-          [repairId]: errData.detail || "Failed to seal record on blockchain."
-        }));
+        setSealErrors((prev) => ({ ...prev, [repairId]: errData.detail || "Failed to seal record on blockchain." }));
         return;
       }
 
       const data = await res.json();
       if (data.status === 'success') {
-        onPushWeb3Log?.(
-          "Solidity EVM", 
-          `Road Repair ${repairId} locked on-chain. Sealed Tx: ${data.tx_hash}`, 
-          "hex"
-        );
+        onPushWeb3Log?.("Solidity EVM", `Road Repair ${repairId} locked on-chain. Sealed Tx: ${data.tx_hash}`, "hex");
         fetchRepairs();
       }
     } catch (err) {
-      console.error("Error sealing repair record", err);
-      setSealErrors((prev) => ({
-        ...prev,
-        [repairId]: "Network error broadcasting transaction to blockchain."
-      }));
+      setSealErrors((prev) => ({ ...prev, [repairId]: "Network error broadcasting transaction to blockchain." }));
     } finally {
       setActioningId(null);
     }
@@ -251,38 +206,36 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
   const calculateDaysLeft = (expiryStr: string) => {
     const expiry = new Date(expiryStr);
     const today = new Date();
-    const diffTime = expiry.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     return diffDays;
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96 font-mono text-xs text-dossier-text">
-        <span className="animate-pulse">PARSING ROAD RESTORATION RECORDS...</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 400 }}>
+        <span style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>Loading road restoration records...</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="border-b border-dossier-border pb-4">
-        <h1 className="font-serif text-3xl font-black uppercase tracking-tight text-dossier-text">Road-Repair SLA Tracker</h1>
-        <p className="text-xs text-dossier-muted font-mono mt-0.5 uppercase font-bold">EXHIBIT C: AMRUT YOJANA ROAD RESTORATION COMPLIANCE</p>
-      </div>
-
-      <div className="bg-status-review/5 border border-status-review/25 p-4 font-mono text-xs text-dossier-text">
-        <span className="text-status-review font-bold uppercase block mb-1">Audit Policy Checklist:</span>
-        <p className="leading-relaxed font-sans text-xs text-dossier-text mt-1.5 font-medium">
-          Amrut Yojana road-repair contractors are required to restore excavated pipeline roads to a level asphalt grade. 
-          AuditChain enforces a 30-day citizen complaint SLA window. 
-          If more than 3 complaints are validated by GPS tags, contract funds are automatically held, and an audit breach is registered on-chain.
+    <div className="flex flex-col gap-stack-lg w-full">
+      {/* ── Header ──────────────────────────────────────────────── */}
+      <section className="flex flex-col gap-stack-sm max-w-3xl">
+        <div className="inline-flex items-center gap-2 bg-primary-container/5 border border-primary/20 px-3 py-1.5 rounded-full w-fit">
+          <span className="material-symbols-outlined text-[16px] text-primary">policy</span>
+          <span className="font-label-sm text-label-sm text-primary uppercase tracking-wider">Citizen SLA Enforcement</span>
+        </div>
+        <h2 className="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-on-surface text-balance tracking-tight">
+          Road SLA Tracker
+        </h2>
+        <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl text-balance">
+          Contractors are required to restore excavated pipeline roads to a level asphalt grade. AuditChain enforces a 30-day citizen complaint SLA window. If &gt;3 complaints are filed, contract funds are automatically held, and an audit breach is registered on-chain.
         </p>
-      </div>
+      </section>
 
-      {/* Grid of SLA repair cards */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+      {/* ── Grid of SLA repair cards ────────────────────────────── */}
+      <div className="flex flex-col gap-12">
         {repairs.map((repair) => {
           const daysLeft = calculateDaysLeft(repair.sla_expiry_date);
           const isBreached = repair.status === 'breached';
@@ -293,230 +246,177 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
           const hasAlreadyReported = reportedIds.includes(repair.id);
           
           return (
-            <div 
-              key={repair.id} 
-              className={`border p-6 bg-dossier-card transition-all flex flex-col justify-between rounded-none ${
-                isBreached 
-                  ? 'border-status-flagged bg-status-flagged/5' 
-                  : isVerified 
-                    ? 'border-status-verified bg-status-verified/5' 
-                    : 'border-dossier-border'
-              }`}
-            >
-              <div>
-                {/* Zone and status header */}
-                <div className="flex justify-between items-start pb-3 border-b border-dossier-border mb-4">
-                  <div>
-                    <span className="font-mono text-[9px] text-dossier-muted block uppercase font-bold">Contract Ref: {repair.id}</span>
-                    <h3 className="font-serif text-lg font-black uppercase text-dossier-text mt-0.5">{repair.ward_name}</h3>
+            <div key={repair.id} className="grid grid-cols-1 xl:grid-cols-12 gap-gutter">
+              
+              {/* Left Column (Slider) */}
+              <section className="xl:col-span-8 bg-surface-container-lowest rounded-xl shadow-ambient p-stack-sm border border-outline-variant/30 flex flex-col gap-stack-sm hover:-translate-y-[2px] transition-transform duration-300">
+                <div className="flex justify-between items-center px-2">
+                  <div className="flex items-center gap-3">
+                    <span className="material-symbols-outlined text-on-surface-variant">construction</span>
+                    <h3 className="font-headline-md text-headline-md text-on-surface font-bold tracking-tight m-0">{repair.ward_name}</h3>
                   </div>
-                  
-                  <div>
-                    {isBreached && (
-                      <span className="font-mono text-[9px] font-bold border border-status-flagged text-status-flagged px-2 py-0.5 uppercase bg-status-flagged/10">
-                        SLA BREACHED
-                      </span>
-                    )}
-                    {isVerified && (
-                      <span className="font-mono text-[9px] font-bold border border-status-verified text-status-verified px-2 py-0.5 uppercase bg-status-verified/10">
-                        AUDIT APPROVED
-                      </span>
-                    )}
-                    {!isBreached && !isVerified && (
-                      <span className="font-mono text-[9px] font-bold border border-status-review text-status-review px-2 py-0.5 uppercase bg-status-review/10 animate-pulse">
-                        SLA INSPECTION OPEN
-                      </span>
-                    )}
-                  </div>
+                  {isBreached && <span className="bg-error-container text-on-error-container px-3 py-1 rounded-full text-label-sm font-semibold tracking-wide uppercase">SLA Breach</span>}
+                  {isVerified && <span className="bg-tertiary-fixed text-on-tertiary-fixed px-3 py-1 rounded-full text-label-sm font-semibold tracking-wide flex items-center gap-1 uppercase"><span className="material-symbols-outlined text-[14px]">verified</span> Audit Cleared</span>}
+                  {!isBreached && !isVerified && <span className="bg-primary-fixed text-on-primary-fixed px-3 py-1 rounded-full text-label-sm font-semibold tracking-wide uppercase">Inspection Open</span>}
                 </div>
-
-                {/* Telemetry info parameters */}
-                <div className="grid grid-cols-2 gap-4 font-mono text-[10px] text-dossier-text mb-6">
-                  <div>
-                    <span className="text-dossier-muted block uppercase text-[9px] font-bold">Contractor:</span>
-                    <span className="font-bold text-dossier-text">{repair.contractor_name}</span>
+                <div className="flex-1 rounded-lg overflow-hidden border border-outline-variant/20">
+                  <BeforeAfterSlider before={repair.before_photo_url} after={repair.after_photo_url} label={repair.location_gps} />
+                </div>
+                
+                {/* Metrics */}
+                <div className="grid grid-cols-3 gap-4 pt-2 pb-2 px-2">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] font-semibold text-secondary uppercase tracking-wide">Contractor</span>
+                    <span className="font-label-bold text-on-surface font-semibold">{repair.contractor_name}</span>
                   </div>
-                  <div>
-                    <span className="text-dossier-muted block uppercase text-[9px] font-bold">GIS Location:</span>
-                    <span className="font-bold text-dossier-text flex items-center gap-1">
-                      <MapPin size={10} className="text-status-review" />
-                      {repair.location_gps}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-dossier-muted block uppercase text-[9px] font-bold">Inspection Window:</span>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] font-semibold text-secondary uppercase tracking-wide">Window</span>
                     {isVerified ? (
-                      <span className="font-bold text-status-verified uppercase text-[9px]">Audit Cleared</span>
+                      <span className="font-label-bold font-bold text-[#059669]">Closed</span>
                     ) : daysLeft > 0 ? (
-                      <span className="font-bold text-status-review flex items-center gap-1 text-[9px]">
-                        <Clock size={10} />
-                        {daysLeft} days remaining
+                      <span className="font-label-bold font-bold text-[#D97706] flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[16px]">schedule</span> {daysLeft} days left
                       </span>
                     ) : (
-                      <span className="font-bold text-status-flagged uppercase text-[9px]">Inspection Closed</span>
+                      <span className="font-label-bold font-bold text-[#DC2626]">Closed</span>
                     )}
                   </div>
-                  <div>
-                    <span className="text-dossier-muted block uppercase text-[9px] font-bold">Citizen Submissions:</span>
-                    <span className={`font-bold ${isBreached ? 'text-status-flagged text-xs' : 'text-dossier-text'}`}>
-                      {repair.complaints_count} Reports Filed
-                    </span>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] font-semibold text-secondary uppercase tracking-wide">Complaints</span>
+                    <span className={`font-label-bold font-bold ${isBreached ? 'text-error' : 'text-on-surface'}`}>{repair.complaints_count} filed</span>
                   </div>
                 </div>
+              </section>
 
-                {/* Before/After Photo exhibits */}
-                <div className="grid grid-cols-2 gap-4 my-6">
-                  <div className="space-y-1.5">
-                    <span className="font-mono text-[9px] text-dossier-muted block uppercase font-bold">EXHIBIT C-1 (EXCAVATION):</span>
-                    <div className="border border-dossier-border h-36 bg-dossier-bg overflow-hidden relative rounded-none">
-                      <img 
-                        src={repair.before_photo_url} 
-                        alt="Excavated road trench" 
-                        className="w-full h-full object-cover grayscale contrast-125 hover:grayscale-0 transition-all duration-150" 
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <span className="font-mono text-[9px] text-dossier-muted block uppercase font-bold">EXHIBIT C-2 (RESTORATION):</span>
-                    <div className="border border-dossier-border h-36 bg-dossier-bg overflow-hidden relative rounded-none">
-                      <img 
-                        src={repair.after_photo_url} 
-                        alt="Restored asphalt patch" 
-                        className="w-full h-full object-cover grayscale contrast-110 hover:grayscale-0 transition-all duration-150" 
-                      />
-                    </div>
-                  </div>
+              {/* Right Column (Timeline & Actions) */}
+              <section className="xl:col-span-4 bg-surface-container-lowest rounded-xl shadow-ambient p-stack-md flex flex-col gap-stack-md border border-outline-variant/30 hover:-translate-y-[2px] transition-transform duration-300">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wide font-semibold m-0">SLA Timeline</h4>
+                  <span className="text-[11px] text-secondary font-mono font-medium">Ref: {repair.id}</span>
                 </div>
-              </div>
 
-              {/* On-chain seal detail, feedback notifications and action buttons */}
-              <div className="border-t border-dashed border-dossier-border pt-4 space-y-3">
-                {repair.tx_hash && (
-                  <div className="font-mono text-[9px] text-dossier-text flex flex-col gap-0.5 bg-dossier-bg p-2 border border-dossier-border">
-                    <div className="flex items-center gap-1 text-status-verified font-bold uppercase">
-                      <CheckCircle size={10} />
-                      <span>ON-CHAIN SLA SEAL RECORDED:</span>
-                    </div>
-                    <span className="truncate select-all text-dossier-muted font-bold">{repair.tx_hash}</span>
-                  </div>
-                )}
-
-                {/* Success Notification */}
-                {currentSuccess && (
-                  <div className="font-mono text-[10px] font-bold text-status-verified bg-status-verified/10 border border-status-verified/30 p-2 flex items-center gap-1.5 animate-fadeIn">
-                    <CheckCircle size={12} className="shrink-0" />
-                    <span>{currentSuccess}</span>
-                  </div>
-                )}
-
-                {/* Standalone Error Notification (when form is not open) */}
-                {currentError && !isFormOpen && (
-                  <div className="font-mono text-[10px] font-bold text-status-flagged bg-status-flagged/10 border border-status-flagged/30 p-2 flex items-center gap-1.5 animate-fadeIn">
-                    <AlertTriangle size={12} className="shrink-0" />
-                    <span>{currentError}</span>
-                  </div>
-                )}
-
-                {/* Inline Complaint Input Form */}
-                {isFormOpen && (
-                  <div className="border border-status-flagged/40 bg-status-flagged/5 p-3 space-y-2.5">
-                    <div className="flex justify-between items-center">
-                      <label className="font-mono text-[10px] font-bold uppercase text-status-flagged flex items-center gap-1">
-                        <MessageSquare size={11} />
-                        <span>Describe the issue you observed:</span>
-                      </label>
-                      <span className={`font-mono text-[9px] font-bold ${complaintText.trim().length >= 10 ? 'text-status-verified' : 'text-dossier-muted'}`}>
-                        {complaintText.trim().length}/10 min chars
-                      </span>
-                    </div>
-
-                    <textarea
-                      value={complaintText}
-                      onChange={(e) => setComplaintText(e.target.value)}
-                      placeholder="Describe the defect in detail (e.g. trench left unrepaired, substandard asphalt grade, hazardous rubble/debris)..."
-                      rows={3}
-                      className="w-full bg-dossier-bg border border-dossier-border p-2 font-mono text-xs text-dossier-text placeholder:text-dossier-muted focus:border-status-flagged focus:outline-none resize-none"
-                      disabled={actioningId === repair.id}
-                      autoFocus
-                    />
-
-                    {currentError && (
-                      <div className="font-mono text-[10px] font-bold text-status-flagged bg-status-flagged/10 border border-status-flagged/30 p-1.5 flex items-center gap-1">
-                        <AlertTriangle size={11} className="shrink-0" />
-                        <span>{currentError}</span>
+                <div className="flex-1">
+                  <div className="flex flex-col gap-4 relative">
+                    <div className="timeline-line" />
+                    
+                    <div className="timeline-item flex gap-4 relative z-10">
+                      <div className="w-10 h-10 rounded-full bg-surface-container-high border-2 border-surface-container-lowest flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-on-surface-variant text-[18px]">build</span>
                       </div>
-                    )}
-
-                    <div className="flex gap-2 justify-end">
-                      <button
-                        type="button"
-                        onClick={() => handleCancelComplaint(repair.id)}
-                        disabled={actioningId === repair.id}
-                        className="px-3 py-1.5 border border-dossier-border text-dossier-muted font-mono text-[10px] font-bold uppercase hover:bg-dossier-text/5 cursor-pointer disabled:opacity-50 flex items-center gap-1"
-                      >
-                        <X size={11} />
-                        <span>Cancel</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleFileComplaint(repair.id)}
-                        disabled={actioningId === repair.id || complaintText.trim().length < 10}
-                        className="px-3.5 py-1.5 border border-status-flagged bg-status-flagged text-white font-mono text-[10px] font-bold uppercase hover:bg-status-flagged/90 cursor-pointer disabled:opacity-50 flex items-center gap-1"
-                      >
-                        <Send size={11} />
-                        <span>{actioningId === repair.id ? "Submitting..." : "Submit Complaint"}</span>
-                      </button>
+                      <div className="pt-2">
+                        <div className="font-label-bold text-on-surface font-semibold">Work Completed</div>
+                        <div className="text-[12px] text-secondary font-medium">{new Date(repair.work_completed_date).toLocaleDateString()}</div>
+                      </div>
                     </div>
+                    
+                    <div className="timeline-item flex gap-4 relative z-10">
+                      <div className="w-10 h-10 rounded-full bg-primary-container/20 border-2 border-surface-container-lowest flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-primary text-[18px]">visibility</span>
+                      </div>
+                      <div className="pt-2">
+                        <div className="font-label-bold text-on-surface font-semibold">Inspection Window</div>
+                        <div className="text-[12px] text-secondary font-medium">30-day citizen audit</div>
+                      </div>
+                    </div>
+
+                    <div className="timeline-item flex gap-4 relative z-10">
+                      <div className={`w-10 h-10 rounded-full border-2 border-surface-container-lowest flex items-center justify-center shrink-0 ${isBreached ? 'bg-error-container' : isVerified ? 'bg-tertiary-fixed' : 'bg-surface-container-high'}`}>
+                        <span className={`material-symbols-outlined text-[18px] ${isBreached ? 'text-on-error-container' : isVerified ? 'text-on-tertiary-fixed' : 'text-on-surface-variant'}`}>{isBreached ? 'gavel' : isVerified ? 'verified' : 'pending'}</span>
+                      </div>
+                      <div className="pt-2">
+                        <div className={`font-label-bold font-semibold ${isBreached ? 'text-error' : 'text-on-surface'}`}>{isBreached ? 'Breach Registered' : 'SLA Expiry'}</div>
+                        <div className="text-[12px] text-secondary font-medium">{new Date(repair.sla_expiry_date).toLocaleDateString()}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {repair.tx_hash && (
+                  <div className="bg-tertiary-fixed/40 border border-tertiary-fixed rounded p-3 mb-2">
+                    <div className="text-[11px] text-on-tertiary-fixed font-bold mb-1 uppercase tracking-wider flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">link</span> On-Chain Seal Recorded
+                    </div>
+                    <div className="font-mono text-xs text-on-surface-variant break-all">{repair.tx_hash}</div>
                   </div>
                 )}
 
-                {/* Primary Action Buttons */}
-                {!isFormOpen && (
-                  <div className="flex gap-3">
-                    {/* Citizen Complaint button: Hidden entirely for officer/auditor roles */}
-                    {!isRestrictedRole && (
-                      <>
-                        {hasAlreadyReported ? (
-                          <div className="flex-1 flex items-center justify-center gap-1.5 border border-status-verified/30 bg-status-verified/10 text-status-verified py-2 text-xs font-mono font-bold uppercase select-none cursor-not-allowed">
-                            <ShieldCheck size={13} className="text-status-verified" />
-                            <span>You already reported this case</span>
+                {currentSuccess && (
+                  <div className="flex items-center gap-2 bg-tertiary-fixed text-on-tertiary-fixed p-3 rounded text-[13px] font-medium mb-2">
+                    <span className="material-symbols-outlined text-[18px]">check_circle</span> {currentSuccess}
+                  </div>
+                )}
+
+                {currentError && !isFormOpen && (
+                  <div className="flex items-center gap-2 bg-error-container text-on-error-container p-3 rounded text-[13px] font-medium mb-2">
+                    <span className="material-symbols-outlined text-[18px]">warning</span> {currentError}
+                  </div>
+                )}
+
+                <div className="mt-auto">
+                  {isFormOpen ? (
+                    <div className="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 shadow-sm">
+                      <div className="flex justify-between items-center mb-3">
+                        <label className="text-[13px] font-bold text-on-surface flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[16px]">comment</span> Describe Issue
+                        </label>
+                        <span className={`text-[11px] font-medium ${complaintText.trim().length >= 10 ? 'text-[#059669]' : 'text-secondary'}`}>
+                          {complaintText.trim().length}/10 min
+                        </span>
+                      </div>
+                      <textarea
+                        value={complaintText}
+                        onChange={(e) => setComplaintText(e.target.value)}
+                        placeholder="Describe the defect in detail (e.g. trench left unrepaired, hazardous rubble)..."
+                        rows={3}
+                        disabled={actioningId === repair.id}
+                        className="w-full p-3 border border-outline-variant rounded font-body-md text-[13px] resize-none outline-none mb-3 focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                        autoFocus
+                      />
+                      {currentError && <div className="text-[12px] text-error mb-3">{currentError}</div>}
+                      <div className="flex justify-end gap-3">
+                        <button onClick={() => handleCancelComplaint(repair.id)} disabled={actioningId === repair.id} className="text-secondary hover:text-on-surface font-label-bold text-[13px] px-3 transition-colors">Cancel</button>
+                        <button onClick={() => handleFileComplaint(repair.id)} disabled={actioningId === repair.id || complaintText.trim().length < 10} className="bg-primary text-on-primary font-label-bold px-4 py-2 rounded flex items-center gap-2 disabled:opacity-50 transition-transform active:scale-95">
+                          <span className="material-symbols-outlined text-[16px]">send</span> {actioningId === repair.id ? "Submitting..." : "Submit Complaint"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-3">
+                      {!isRestrictedRole && (
+                        hasAlreadyReported ? (
+                          <div className="flex-1 flex items-center justify-center gap-2 bg-surface-container-high text-secondary border border-outline-variant rounded-lg py-3 text-[13px] font-bold">
+                            <span className="material-symbols-outlined text-[18px]">verified_user</span> Already Reported
                           </div>
                         ) : (
                           <button
                             onClick={() => handleOpenComplaintForm(repair.id)}
                             disabled={actioningId === repair.id || isVerified}
-                            className="flex-1 flex items-center justify-center gap-1.5 border border-status-flagged text-status-flagged py-2 text-xs font-mono font-bold hover:bg-status-flagged/5 transition-colors uppercase disabled:opacity-50 cursor-pointer"
+                            className="flex-1 bg-primary text-on-primary font-label-bold py-3 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 transition-transform hover:-translate-y-[2px] active:scale-95 shadow-sm"
                           >
-                            <MessageSquare size={13} />
-                            <span>Submit Complaint</span>
+                            <span className="material-symbols-outlined text-[18px]">add_comment</span> Submit Complaint
                           </button>
-                        )}
-                      </>
-                    )}
+                        )
+                      )}
 
-                    {/* Lead Auditor Seal button: restricted strictly to auditor role */}
-                    {role === 'auditor' && !isVerified && (
-                      <button
-                        onClick={() => handleSealRecord(repair.id)}
-                        disabled={actioningId === repair.id}
-                        className="flex-1 flex items-center justify-center gap-1.5 border border-status-verified text-status-verified py-2 text-xs font-mono font-bold hover:bg-status-verified/5 transition-colors uppercase disabled:opacity-50 cursor-pointer"
-                      >
-                        <Key size={13} />
-                        <span>{actioningId === repair.id ? "Signing..." : "Release Funds / Seal"}</span>
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Sealing error notification */}
-                {sealErrors[repair.id] && (
-                  <div className="mt-2 font-mono text-[10px] font-bold text-status-flagged bg-status-flagged/10 border border-status-flagged/30 p-2 flex items-center gap-1.5">
-                    <AlertTriangle size={12} className="shrink-0" />
-                    <span>{sealErrors[repair.id]}</span>
-                  </div>
-                )}
-              </div>
+                      {role === 'auditor' && !isVerified && (
+                        <button
+                          onClick={() => handleSealRecord(repair.id)}
+                          disabled={actioningId === repair.id}
+                          className="flex-1 bg-tertiary text-on-tertiary font-label-bold py-3 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 transition-transform hover:-translate-y-[2px] active:scale-95 shadow-sm"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">key</span> {actioningId === repair.id ? "Signing..." : "Release Funds & Seal EVM"}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  
+                  {sealErrors[repair.id] && (
+                    <div className="flex items-center gap-2 bg-error-container text-on-error-container p-3 rounded-lg text-[13px] font-medium mt-3">
+                      <span className="material-symbols-outlined text-[18px]">warning</span> {sealErrors[repair.id]}
+                    </div>
+                  )}
+                </div>
+              </section>
             </div>
           );
         })}
