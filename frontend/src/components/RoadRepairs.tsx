@@ -20,14 +20,16 @@ interface RoadRepairsProps {
   role: string;
   token?: string | null;
   onAuthError?: (errMessage: string) => void;
+  onPushWeb3Log?: (source: string, message: string, type: 'info' | 'success' | 'warn' | 'hex') => void;
 }
 
 const STORAGE_KEY = 'auditchain_reported_repairs';
 
-export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthError }) => {
+export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthError, onPushWeb3Log }) => {
   const [repairs, setRepairs] = useState<RoadRepair[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [actioningId, setActioningId] = useState<string | null>(null);
+  const [sealErrors, setSealErrors] = useState<{ [repairId: string]: string }>({});
 
   // Track reported repairs across sessions / reloads
   const [reportedIds, setReportedIds] = useState<string[]>(() => {
@@ -157,6 +159,13 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
         }));
         setActiveComplaintId(null);
         setComplaintText('');
+        
+        onPushWeb3Log?.(
+          "Citizen Registry", 
+          `Complaint recorded on ${repairId}. Total: ${data.complaints_count} reports. SLA Status: ${data.repair_status?.toUpperCase()}`, 
+          data.repair_status === 'breached' ? 'warn' : 'info'
+        );
+
         fetchRepairs();
 
         // Clear success message after 6 seconds
@@ -181,6 +190,7 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
 
   const handleSealRecord = async (repairId: string) => {
     setActioningId(repairId);
+    setSealErrors((prev) => ({ ...prev, [repairId]: '' }));
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) {
@@ -190,7 +200,7 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
       const res = await fetch('/api/blockchain/lock', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ type: 'road', id: repairId })
+        body: JSON.stringify({ type: 'road', id: repairId, disposition: 'cleared' })
       });
 
       if (res.status === 401 || res.status === 403) {
@@ -199,12 +209,40 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
         return;
       }
 
+      if (res.status === 503) {
+        const errData = await res.json().catch(() => ({}));
+        setSealErrors((prev) => ({
+          ...prev,
+          [repairId]: errData.detail || "Blockchain node unavailable — is Anvil running?"
+        }));
+        onPushWeb3Log?.("Web3 Error", "Blockchain RPC node at :8545 unreachable.", "warn");
+        return;
+      }
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        setSealErrors((prev) => ({
+          ...prev,
+          [repairId]: errData.detail || "Failed to seal record on blockchain."
+        }));
+        return;
+      }
+
       const data = await res.json();
       if (data.status === 'success') {
+        onPushWeb3Log?.(
+          "Solidity EVM", 
+          `Road Repair ${repairId} locked on-chain. Sealed Tx: ${data.tx_hash}`, 
+          "hex"
+        );
         fetchRepairs();
       }
     } catch (err) {
       console.error("Error sealing repair record", err);
+      setSealErrors((prev) => ({
+        ...prev,
+        [repairId]: "Network error broadcasting transaction to blockchain."
+      }));
     } finally {
       setActioningId(null);
     }
@@ -468,6 +506,14 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
                         <span>{actioningId === repair.id ? "Signing..." : "Release Funds / Seal"}</span>
                       </button>
                     )}
+                  </div>
+                )}
+
+                {/* Sealing error notification */}
+                {sealErrors[repair.id] && (
+                  <div className="mt-2 font-mono text-[10px] font-bold text-status-flagged bg-status-flagged/10 border border-status-flagged/30 p-2 flex items-center gap-1.5">
+                    <AlertTriangle size={12} className="shrink-0" />
+                    <span>{sealErrors[repair.id]}</span>
                   </div>
                 )}
               </div>

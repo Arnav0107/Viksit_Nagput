@@ -1,4 +1,4 @@
-# AuditChain Nagpur — Frontend
+# AuditChain Nagpur
 
 > **Civic-Tech Municipal Audit & Tamper-Proof Cryptographic Verification Dashboard for Nagpur Municipal Corporation (NMC)**
 
@@ -8,11 +8,11 @@ AuditChain Nagpur exposes waste-contractor weighbridge fraud detection, road-rep
 
 ## 🏛️ Local Architecture & Ports
 
-| Service | Port / URL | Description |
-| :--- | :--- | :--- |
-| **Frontend UI (Vite)** | `http://localhost:3000` | React 19 + TypeScript + Tailwind CSS |
-| **Backend API (FastAPI)** | `http://127.0.0.1:8001` | SQLite DB, Anomaly ML, REST endpoints |
-| **Local EVM Node (Anvil)** | `http://127.0.0.1:8545` | `AuditChain.sol` Smart Contract |
+| Service | Port / URL | Description | Directory |
+| :--- | :--- | :--- | :--- |
+| **Frontend UI (Vite)** | `http://localhost:3000` | React 19 + TypeScript + Tailwind CSS | `./frontend` |
+| **Backend API (FastAPI)** | `http://127.0.0.1:8001` | SQLite DB, Anomaly ML, REST endpoints | `./backend` |
+| **Local EVM Node (Anvil)** | `http://127.0.0.1:8545` | `AuditChain.sol` Smart Contract | `./contracts` |
 
 ---
 
@@ -32,7 +32,7 @@ pip install -r requirements.txt
 python -m app.seed
 python -m app.anomaly
 
-# Start FastAPI server
+# Start FastAPI server on port 8001
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload
 ```
 
@@ -65,40 +65,33 @@ The login screen features 1-click credential presets for demo and jury evaluatio
 
 ## 🌟 Core Features & Modules
 
-### 1. Zone Summary (`Overview.tsx`)
+### 1. Zone Summary (`frontend/src/components/Overview.tsx`)
 - **10 Nagpur Administrative Wards**: *Laxmi Nagar, Dharampeth, Hanuman Nagar, Dhantoli, Nehru Nagar, Gandhi Baugh, Sataranjipura, Lakadganj, Ashi Nagar, Mangalwari*.
 - **Interactive Leaflet Map**: Severity-colored markers (`low` = forest green, `medium` = ochre, `high` = crimson) scaled by anomaly count with interactive popups.
 - **April–July Tonnage Collapse Chart**: Recharts AreaChart visualizing the 6,400+ MT sudden drop with monetary spend tooltips.
 - **Audited Contractor Quick Cards**: Fast navigation into contractor dossiers.
 
-### 2. Contractor Performance Audit (`ContractorDetail.tsx`)
+### 2. Contractor Performance Audit (`frontend/src/components/ContractorDetail.tsx`)
 - **Contractor Tabs**: Switch between `Antony Waste Handling Cell Ltd` and `BVG India Pvt Ltd`.
 - **Daily Tonnage Curve**: Area chart with reference generation targets (740 MT / 610 MT) and pulsing red dot markers on anomalous days.
 - **Recent Filings Registry**: Table of the 10 most recent weighbridge tickets with 1-click inspection links.
 
-### 3. Evidence Exhibits & GIS Telemetry (`FlaggedCases.tsx`)
+### 3. Evidence Exhibits & GIS Telemetry (`frontend/src/components/FlaggedCases.tsx`)
 - **Docket Slip Mockup**: Vehicle rated capacity deviation calculation, driver signature, filing timestamp.
 - **Physical Boom-Barrier Gate Verification**: RFID badge checking entry against independent barrier logs.
 - **GIS Route Analysis**: Polyline route mapping, 500m geofence around Bhandewadi MSW Dump Yard, and warning flags for routes that never visited the dump yard.
 - **Auditor Ruling & Sealing Flow**: Lead Auditor can sign `confirmed_fraud` (mandatory note) or `cleared` on-chain via `/api/blockchain/lock`.
 
-### 4. Road SLA Tracker (`RoadRepairs.tsx`)
+### 4. Road SLA Tracker (`frontend/src/components/RoadRepairs.tsx`)
 - **Amrut Yojana Restorations**: Side-by-side before/after photo comparisons.
 - **SLA Countdown**: Real-time days remaining vs. SLA breach indicators.
 - **Citizen Complaint Filing**: Public submission with 10-char validation, client & server 409 duplication handling with `localStorage` persistence (`auditchain_reported_repairs`).
 - **Dynamic Status**: Automatic flipping to `breached` when complaints cross threshold (> 3).
 
-### 5. Public Transparency Portal (`PublicTransparency.tsx`)
+### 5. Public Transparency Portal (`frontend/src/components/PublicTransparency.tsx`)
 - **Compliance Report Cards**: Grade calculation (F, D-, C+, B) based on verified fraud violations and claims.
 - **Inquiry Timeline**: 2026 chronological investigation milestones.
 - **Live Sealed Ledger Chronology**: Real-time querying of smart contract event records with verified transaction hashes.
 
-### 6. Web3 Monospace Console (`Web3Console.tsx`)
+### 6. Web3 Monospace Console (`frontend/src/components/Web3Console.tsx`)
 - Fixed collapsible bottom terminal streaming cryptographic events, transaction hashes, and EVM status updates in real time.
-
----
-
-## 🎨 Design System
-- **Editorial Print Aesthetic**: Bespoke typography and contrast rules tailored for municipal audit reports.
-- **Theme Support**: Seamless light and dark mode switching with DOM synchronization.
-- **Zero Placeholder Images**: Fully populated with authentic GIS coordinates and municipal evidence exhibits.

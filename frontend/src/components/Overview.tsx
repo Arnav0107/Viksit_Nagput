@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Database, TrendingDown, ArrowRight } from 'lucide-react';
+import { AlertTriangle, Database, TrendingDown, ArrowRight, Building, ShieldAlert } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { MapContainer, TileLayer, CircleMarker, GeoJSON, Tooltip as LeafletTooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, GeoJSON, Popup, Tooltip as LeafletTooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Nagpur administrative city boundary GeoJSON
@@ -16,17 +16,18 @@ interface OverviewProps {
 export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate }) => {
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
 
+  // Approximate lat/lng coordinates for all 10 official Nagpur administrative zones
   const zonesData = [
     { name: "Dhantoli", coords: [21.1299, 79.0798] },
-    { name: "Dharampeth", coords: [21.1287, 79.0525] },
-    { name: "Hanuman Nagar", coords: [21.1450, 79.0700] },
-    { name: "Nehru Nagar", coords: [21.1150, 79.0850] },
+    { name: "Dharampeth", coords: [21.1426, 79.0559] },
+    { name: "Hanuman Nagar", coords: [21.1189, 79.1039] },
+    { name: "Nehru Nagar", coords: [21.1150, 79.1180] },
     { name: "Gandhi Baugh", coords: [21.1550, 79.1050] },
-    { name: "Sataranjipura", coords: [21.1600, 79.1150] },
-    { name: "Lakadganj", coords: [21.1580, 79.1300] },
-    { name: "Ashi Nagar", coords: [21.1050, 79.1050] },
-    { name: "Mangalwari", coords: [21.1750, 79.0600] },
-    { name: "Laxmi Nagar", coords: [21.1400, 79.0900] }
+    { name: "Sataranjipura", coords: [21.1620, 79.1120] },
+    { name: "Lakadganj", coords: [21.1520, 79.1320] },
+    { name: "Ashi Nagar", coords: [21.1780, 79.1200] },
+    { name: "Mangalwari", coords: [21.1710, 79.0720] },
+    { name: "Laxmi Nagar", coords: [21.1255, 79.0680] }
   ];
 
   if (loading || !data) {
@@ -38,7 +39,7 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate })
     );
   }
 
-  const { summary, ward_anomalies, monthly_tonnage_history } = data;
+  const { summary, ward_anomalies = {}, monthly_tonnage_history = [], contractors = [] } = data;
 
   const getBadgeColor = (severity: string) => {
     switch (severity) {
@@ -111,6 +112,58 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate })
         </div>
       </div>
 
+      {/* Contractor Summary Cards */}
+      {contractors.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="font-mono text-xs text-dossier-muted uppercase font-bold tracking-wider">
+              Audited Municipal Contractors
+            </span>
+            <button
+              onClick={() => onNavigate("contractors")}
+              className="text-xs font-mono text-status-verified font-bold uppercase hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>View Detailed Profiles</span>
+              <ArrowRight size={12} />
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {contractors.map((c: any) => (
+              <div 
+                key={c.id} 
+                onClick={() => onNavigate("contractors")}
+                className="border border-dossier-border p-4 bg-dossier-card hover:border-dossier-text transition-all cursor-pointer flex justify-between items-center group"
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Building size={14} className="text-dossier-muted group-hover:text-dossier-text" />
+                    <h3 className="font-serif font-black text-sm uppercase text-dossier-text">{c.name}</h3>
+                  </div>
+                  <div className="mt-2 flex gap-4 font-mono text-[10px] text-dossier-muted">
+                    <span>Tonnage: <strong className="text-dossier-text font-bold">{c.total_tonnage_mt?.toLocaleString() || 0} MT</strong></span>
+                    <span>Claims: <strong className="text-dossier-text font-bold">₹{((c.claims_inr || 0) / 10000000).toFixed(2)} Cr</strong></span>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  {(c.fraud_flags_confirmed || 0) > 0 ? (
+                    <span className="inline-flex items-center gap-1 font-mono text-[9px] font-bold px-2 py-0.5 border border-status-flagged text-status-flagged bg-status-flagged/10">
+                      <ShieldAlert size={10} />
+                      {c.fraud_flags_confirmed} Ruled Fraud
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 font-mono text-[9px] font-bold px-2 py-0.5 border border-status-verified text-status-verified bg-status-verified/10">
+                      Clean Audit
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Map and Details Block */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
@@ -142,7 +195,7 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate })
               )}
 
               {zonesData.map((zone) => {
-                const auditData = ward_anomalies[zone.name] || { anomalies: 0, severity: "low" };
+                const auditData = ward_anomalies[zone.name] || { anomalies: 0, severity: "low", details: "Normal compliance parameters." };
                 let color = "#1b4d3e"; // Forest Green (verified)
                 if (auditData.severity === 'high') {
                   color = "#9e2a2b"; // Crimson (flagged)
@@ -169,6 +222,20 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate })
                       click: () => setSelectedZone(zone.name)
                     }}
                   >
+                    <Popup>
+                      <div className="font-mono text-xs space-y-1">
+                        <div className="font-bold text-sm uppercase">{zone.name}</div>
+                        <div className="text-[10px] text-gray-600 uppercase">
+                          Severity: <strong className={auditData.severity === 'high' ? 'text-red-700' : auditData.severity === 'medium' ? 'text-amber-700' : 'text-green-700'}>{auditData.severity}</strong>
+                        </div>
+                        <div className="text-[10px] text-gray-700">
+                          {auditData.anomalies} Anomalies Logged
+                        </div>
+                        <div className="text-[10px] text-gray-600 font-sans border-t border-gray-200 pt-1 mt-1">
+                          {auditData.details}
+                        </div>
+                      </div>
+                    </Popup>
                     <LeafletTooltip permanent direction="center" className="leaflet-tooltip-custom border-none bg-transparent shadow-none font-mono text-[8px] font-bold text-black uppercase pointer-events-none">
                       {zone.name}
                     </LeafletTooltip>
@@ -196,7 +263,7 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate })
 
           <div className="text-[10px] font-mono text-dossier-muted flex justify-between items-center border-t border-dossier-border pt-3 font-bold">
             <span>MAP SYSTEM: LEAFLET-OSM</span>
-            <span>Bhandewadi Dumping coordinates: 21.1183° N, 79.0483° E</span>
+            <span>Bhandewadi Dumping coordinates: 21.1408° N, 79.1622° E</span>
           </div>
         </div>
 
@@ -212,7 +279,7 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate })
                   <div className="flex justify-between items-center pb-2">
                     <span className="font-serif text-xl font-bold tracking-tight text-dossier-text">{selectedZone}</span>
                     <span className={`font-mono text-[9px] uppercase px-2 py-0.5 font-bold ${getBadgeColor(ward_anomalies[selectedZone]?.severity || 'low')}`}>
-                      {ward_anomalies[selectedZone]?.severity} severity
+                      {ward_anomalies[selectedZone]?.severity || 'low'} severity
                     </span>
                   </div>
 
@@ -220,13 +287,13 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate })
                     <div>
                       <span className="text-dossier-muted block uppercase text-[10px] font-bold">Registered Anomalies:</span>
                       <span className="font-bold text-dossier-text">
-                        {ward_anomalies[selectedZone]?.anomalies} Contractor Anomaly Reports
+                        {ward_anomalies[selectedZone]?.anomalies || 0} Contractor Anomaly Reports
                       </span>
                     </div>
                     <div>
                       <span className="text-dossier-muted block uppercase text-[10px] font-bold">Audit Narrative:</span>
                       <p className="text-dossier-text leading-relaxed font-sans text-xs mt-1.5 font-medium">
-                        {ward_anomalies[selectedZone]?.details}
+                        {ward_anomalies[selectedZone]?.details || "Normal operating parameters."}
                       </p>
                     </div>
                   </div>
@@ -239,7 +306,7 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate })
               )}
             </div>
 
-            {selectedZone && ward_anomalies[selectedZone]?.anomalies > 0 && (
+            {selectedZone && (ward_anomalies[selectedZone]?.anomalies || 0) > 0 && (
               <div className="pt-4 border-t border-dashed border-dossier-border mt-4">
                 <button 
                   onClick={() => {
@@ -292,6 +359,10 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate })
               <XAxis dataKey="month" stroke="rgba(42,42,42,0.5)" tickLine={false} style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 'bold' }} />
               <YAxis stroke="rgba(42,42,42,0.5)" tickLine={false} style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 'bold' }} tickFormatter={(val) => `${val/1000}k MT`} />
               <Tooltip 
+                formatter={(value: any, name: any, item: any) => {
+                  const spend = item.payload.spend_inr ? ` (₹${(item.payload.spend_inr/10000000).toFixed(2)} Cr)` : '';
+                  return [`${Number(value).toLocaleString()} MT${spend}`, 'Billed Tonnage'];
+                }}
                 contentStyle={{ 
                   backgroundColor: 'var(--dossier-card)', 
                   borderColor: 'var(--dossier-border)',
@@ -351,3 +422,4 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate })
     </div>
   );
 };
+
