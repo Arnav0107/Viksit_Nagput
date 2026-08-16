@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Shield, ShieldAlert, Users, AlertTriangle, KeyRound, UserCheck, Loader2 } from 'lucide-react';
+import { Shield, ShieldAlert, Users, AlertTriangle, KeyRound, UserCheck, Loader2, ExternalLink } from 'lucide-react';
 
 interface LoginProps {
-  onLogin: (role: string, token: string, username: string) => void;
+  onLogin: (role: string, token: string, username: string, displayName?: string) => void;
+  onExplorePublic?: () => void;
   initialError?: string | null;
 }
 
@@ -13,6 +14,7 @@ const DEMO_PRESETS = [
     subtitle: 'Cryptographic signing & on-chain sealing (Full RBAC)',
     username: 'auditor_nmc',
     password: 'auditor123',
+    displayName: 'NMC Lead Auditor',
     icon: Shield,
     badgeColor: 'border-status-flagged text-status-flagged bg-status-flagged/10',
   },
@@ -22,6 +24,7 @@ const DEMO_PRESETS = [
     subtitle: 'Citizen complaints & SLA review access',
     username: 'officer_ward7',
     password: 'officer123',
+    displayName: 'Ward Zone Officer',
     icon: ShieldAlert,
     badgeColor: 'border-status-review text-status-review bg-status-review/10',
   },
@@ -31,18 +34,19 @@ const DEMO_PRESETS = [
     subtitle: 'Read-only transaction ledger & complaint filing',
     username: 'citizen_nagpur',
     password: 'public123',
+    displayName: 'Public Transparency',
     icon: Users,
     badgeColor: 'border-status-verified text-status-verified bg-status-verified/10',
   },
 ];
 
-export const Login: React.FC<LoginProps> = ({ onLogin, initialError }) => {
+export const Login: React.FC<LoginProps> = ({ onLogin, onExplorePublic, initialError }) => {
   const [username, setUsername] = useState<string>('auditor_nmc');
   const [password, setPassword] = useState<string>('auditor123');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(initialError || null);
 
-  const executeLogin = async (loginUser: string, loginPass: string) => {
+  const executeLogin = async (loginUser: string, loginPass: string, presetDisplayName?: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -60,12 +64,15 @@ export const Login: React.FC<LoginProps> = ({ onLogin, initialError }) => {
         throw new Error(data.detail || 'Authentication failed. Please verify credentials.');
       }
 
+      const displayName = data.display_name || presetDisplayName || data.username;
+
       // Store token securely in sessionStorage (not localStorage)
       sessionStorage.setItem('auditchain_token', data.access_token);
       sessionStorage.setItem('auditchain_role', data.role);
       sessionStorage.setItem('auditchain_user', data.username);
+      sessionStorage.setItem('auditchain_display_name', displayName);
 
-      onLogin(data.role, data.access_token, data.username);
+      onLogin(data.role, data.access_token, data.username, displayName);
     } catch (err: any) {
       setError(err.message || 'Unable to connect to authentication server');
     } finally {
@@ -76,7 +83,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, initialError }) => {
   const handlePresetSelect = (preset: typeof DEMO_PRESETS[0]) => {
     setUsername(preset.username);
     setPassword(preset.password);
-    executeLogin(preset.username, preset.password);
+    executeLogin(preset.username, preset.password, preset.displayName);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -106,7 +113,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, initialError }) => {
 
         {/* Error Notification */}
         {error && (
-          <div className="mb-6 p-3 border border-status-flagged bg-status-flagged/10 text-status-flagged text-xs font-mono flex items-start gap-2">
+          <div className="mb-6 p-3 border border-status-flagged bg-status-flagged/10 text-status-flagged text-xs font-mono flex items-start gap-2 animate-fadeIn">
             <AlertTriangle size={15} className="shrink-0 mt-0.5" />
             <div>
               <span className="font-bold uppercase block">Authentication Error</span>
@@ -218,6 +225,20 @@ export const Login: React.FC<LoginProps> = ({ onLogin, initialError }) => {
           </button>
         </form>
 
+        {/* Public Access Link */}
+        {onExplorePublic && (
+          <div className="mt-4 pt-3 border-t border-dossier-border text-center">
+            <button
+              type="button"
+              onClick={onExplorePublic}
+              className="text-[11px] font-mono text-status-verified hover:underline flex items-center justify-center gap-1.5 mx-auto font-bold uppercase cursor-pointer"
+            >
+              <ExternalLink size={12} />
+              <span>Explore Public Transparency Portal (No Login Required)</span>
+            </button>
+          </div>
+        )}
+
         <div className="mt-6 font-mono text-[9px] text-dossier-muted text-center leading-relaxed">
           <div className="flex justify-center items-center gap-1 text-status-flagged font-bold uppercase mb-1">
             <UserCheck size={11} />
@@ -230,4 +251,5 @@ export const Login: React.FC<LoginProps> = ({ onLogin, initialError }) => {
     </div>
   );
 };
+
 

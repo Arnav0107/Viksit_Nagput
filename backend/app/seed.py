@@ -15,6 +15,7 @@ from app.db import (
     init_db,
 )
 from app.anomaly import run_anomaly_detection, calculate_benchmarks
+from app.blockchain import lock_weighbridge_record, lock_road_repair_record
 
 # GPS bounds for Nagpur routes
 # Bhandewadi dumping ground: 21.1408, 79.1622
@@ -89,7 +90,7 @@ def seed_data(db: Session):
 
     # 1. Seeding regular logs (showing high tonnage in April/May, then drop in June/July)
     # For every regular log where passed_dumping_ground is True, seed a matching physical DumpingGroundGateLog entry.
-    for i in range(120):
+    for i in range(30):
         log_date = start_date + timedelta(days=random.randint(0, 120))
         # Ensure random regular logs do not collide with specific exhibit test cases (July 10-11, June 15-16)
         while (log_date.month == 7 and log_date.day in [10, 11]) or (log_date.month == 6 and log_date.day in [15, 16]):
@@ -121,8 +122,24 @@ def seed_data(db: Session):
         status = "verified"
         flag_reason = None
         
-        # Mock transaction hash
-        tx_hash = f"0x{uuid.uuid4().hex[:64]}"
+        zones = ["Laxmi Nagar", "Dharampeth", "Hanuman Nagar", "Dhantoli", "Nehru Nagar", "Gandhi Baugh", "Sataranjipura", "Lakadganj", "Ashi Nagar", "Mangalwari"]
+        log_zone = random.choice(zones)
+        
+        # Lock on-chain dynamically to get a genuine transaction hash
+        try:
+            lock_res = lock_weighbridge_record(
+                ticket_id=ticket_id,
+                truck_id=truck_id,
+                contractor=contractor_id,
+                weight_kg=round(weight, 1),
+                timestamp=timestamp,
+                gps_route_id=f"RT-{random.randint(101, 110)}",
+                disposition="cleared"
+            )
+            tx_hash = lock_res["tx_hash"]
+        except Exception as e:
+            print(f"Warning: Failed to lock record {ticket_id} on-chain: {e}")
+            tx_hash = f"0x{uuid.uuid4().hex[:64]}"
         
         weigh_log = WeighbridgeLog(
             id=ticket_id,
@@ -135,7 +152,8 @@ def seed_data(db: Session):
             status=status,
             flag_reason=flag_reason,
             tx_hash=tx_hash,
-            benchmarked_difference_pct=calculate_benchmarks(weight, contractor_id, truck_id, db)
+            benchmarked_difference_pct=calculate_benchmarks(weight, contractor_id, truck_id, db),
+            zone=log_zone
         )
         db.add(weigh_log)
         
@@ -196,8 +214,9 @@ def seed_data(db: Session):
         gps_route_id="RT-901",
         status="under_review", # Will be flagged in processing
         flag_reason=None,
-        tx_hash=tx_hash_a,
-        benchmarked_difference_pct=calculate_benchmarks(14820.0, "antony-waste", truck_a, db)
+        tx_hash=None,
+        benchmarked_difference_pct=calculate_benchmarks(14820.0, "antony-waste", truck_a, db),
+        zone="Dharampeth"
     )
     db.add(weigh_a)
     
@@ -250,8 +269,9 @@ def seed_data(db: Session):
             gps_route_id="RT-704",
             status="under_review", # Will be flagged in processing
             flag_reason=None,
-            tx_hash=tx_hash_b,
-            benchmarked_difference_pct=calculate_benchmarks(bvg_weight, "bvg-india", bvg_truck, db)
+            tx_hash=None,
+            benchmarked_difference_pct=calculate_benchmarks(bvg_weight, "bvg-india", bvg_truck, db),
+            zone="Gandhi Baugh"
         )
         db.add(weigh_b)
         
@@ -302,8 +322,9 @@ def seed_data(db: Session):
         gps_route_id="RT-902",
         status="under_review",
         flag_reason=None,
-        tx_hash=tx_hash_c,
-        benchmarked_difference_pct=calculate_benchmarks(10250.0, "antony-waste", truck_c, db)
+        tx_hash=None,
+        benchmarked_difference_pct=calculate_benchmarks(10250.0, "antony-waste", truck_c, db),
+        zone="Dharampeth"
     )
     db.add(weigh_c)
 
@@ -330,6 +351,56 @@ def seed_data(db: Session):
         )
         db.add(gps_log)
 
+    # Anomaly D: Vehicle Overloaded in Laxmi Nagar Zone (Antony Waste)
+    ticket_d = "WB-2026-8023"
+    truck_d = "MH-31-EQ-4522" # Rated capacity: 7000 kg
+    timestamp_d = datetime(2026, 7, 12, 10, 30, 0)
+    tx_hash_d = f"0x{uuid.uuid4().hex[:64]}"
+
+    weigh_d = WeighbridgeLog(
+        id=ticket_d,
+        truck_id=truck_d,
+        contractor_id="antony-waste",
+        timestamp=timestamp_d,
+        weight_kg=9200.0, # Exceeds 7000kg by >10% safety margin (overloaded)
+        driver_name="Sanjay Patil",
+        gps_route_id="RT-903",
+        status="under_review",
+        flag_reason=None,
+        tx_hash=None,
+        benchmarked_difference_pct=calculate_benchmarks(9200.0, "antony-waste", truck_d, db),
+        zone="Laxmi Nagar"
+    )
+    db.add(weigh_d)
+
+    trip_d = GPSTrip(
+        id="TRIP-9023",
+        truck_id=truck_d,
+        start_time=timestamp_d - timedelta(hours=2),
+        end_time=timestamp_d,
+        route_name="Laxmi Nagar to Bhandewadi Dumping Ground",
+        passed_dumping_ground=True,
+        weighbridge_log_id=ticket_d
+    )
+    db.add(trip_d)
+
+    db.add(DumpingGroundGateLog(
+        truck_id=truck_d,
+        entry_timestamp=timestamp_d - timedelta(minutes=5),
+        gate_id="BHANDEWADI-GATE-1"
+    ))
+
+    coords_d = generate_route_coordinates(21.1265, 79.0520, 21.1408, 79.1622, steps=10)
+    for idx, (lat, lon) in enumerate(coords_d):
+        gps_log = GPSLog(
+            truck_id=truck_d,
+            timestamp=timestamp_d - timedelta(minutes=(10 - idx) * 12),
+            latitude=lat,
+            longitude=lon,
+            speed_kmh=random.uniform(18.0, 40.0)
+        )
+        db.add(gps_log)
+
     # 3. SEEDING ROAD REPAIR SLA RECORDS
     print("Seeding road repair SLA records...")
     
@@ -345,7 +416,7 @@ def seed_data(db: Session):
         sla_expiry_date=datetime.utcnow() + timedelta(days=5),
         status="breached",
         complaints_count=8,
-        tx_hash=f"0x{uuid.uuid4().hex[:64]}"
+        tx_hash=None
     )
     
     # SLA Case 2: Active / Under Review (Mangalwari Zone)
@@ -360,10 +431,30 @@ def seed_data(db: Session):
         sla_expiry_date=datetime.utcnow() + timedelta(days=20),
         status="active",
         complaints_count=1,
-        tx_hash=f"0x{uuid.uuid4().hex[:64]}"
+        tx_hash=None
     )
     
     # SLA Case 3: Verified / Cleared (Hanuman Nagar Zone)
+    # Lock on-chain dynamically to get a real transaction hash
+    work_date_rr3 = datetime.utcnow() - timedelta(days=32)
+    sla_expiry_rr3 = datetime.utcnow() - timedelta(days=2)
+    try:
+        lock_res = lock_road_repair_record(
+            repair_id="RR-2026-003",
+            contractor="amrut-repairs",
+            ward_name="Hanuman Nagar Zone",
+            location_gps="21.1189,79.1039",
+            before_photo_url="https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&w=600&q=80",
+            after_photo_url="https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=600&q=80",
+            work_date=work_date_rr3,
+            sla_expiry_date=sla_expiry_rr3,
+            disposition="cleared"
+        )
+        tx_hash_rr3 = lock_res["tx_hash"]
+    except Exception as e:
+        print(f"Warning: Failed to lock road repair RR-2026-003 on-chain: {e}")
+        tx_hash_rr3 = f"0x{uuid.uuid4().hex[:64]}"
+
     rr3 = RoadRepair(
         id="RR-2026-003",
         contractor_id="amrut-repairs",
@@ -371,11 +462,11 @@ def seed_data(db: Session):
         location_gps="21.1189,79.1039",
         before_photo_url="https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&w=600&q=80",
         after_photo_url="https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=600&q=80",
-        work_completed_date=datetime.utcnow() - timedelta(days=32),
-        sla_expiry_date=datetime.utcnow() - timedelta(days=2),
+        work_completed_date=work_date_rr3,
+        sla_expiry_date=sla_expiry_rr3,
         status="verified",
         complaints_count=0,
-        tx_hash=f"0x{uuid.uuid4().hex[:64]}"
+        tx_hash=tx_hash_rr3
     )
     
     db.add_all([rr1, rr2, rr3])

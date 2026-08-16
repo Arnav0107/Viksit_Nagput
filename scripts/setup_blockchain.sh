@@ -36,7 +36,7 @@ if curl -s -X POST -H "Content-Type: application/json" \
     echo "[OK] Anvil Ethereum node is already active on port 8545."
 else
     echo "[INFO] Starting Anvil Ethereum node on port 8545 in background..."
-    anvil --port 8545 > /dev/null 2>&1 &
+    anvil --port 8545 --state anvil-state.json > /dev/null 2>&1 &
     sleep 2
     echo "[OK] Anvil node started."
 fi

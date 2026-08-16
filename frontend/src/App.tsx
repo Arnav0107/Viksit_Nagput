@@ -8,7 +8,7 @@ import { Login } from './components/Login';
 import { Web3Console } from './components/Web3Console';
 import {
   Building, BookOpen, FileSpreadsheet, ShieldAlert,
-  User, Sun, Moon, LogOut, Layers
+  User, Sun, Moon, LogOut, Layers, LogIn, AlertCircle
 } from 'lucide-react';
 
 interface ConsoleLog {
@@ -22,14 +22,16 @@ function App() {
   const [token, setToken] = useState<string | null>(() => sessionStorage.getItem('auditchain_token'));
   const [role, setRole] = useState<string | null>(() => sessionStorage.getItem('auditchain_role'));
   const [username, setUsername] = useState<string | null>(() => sessionStorage.getItem('auditchain_user'));
+  const [displayName, setDisplayName] = useState<string | null>(() => sessionStorage.getItem('auditchain_display_name'));
   const [authError, setAuthError] = useState<string | null>(null);
+  const [inlineNotice, setInlineNotice] = useState<string | null>(null);
 
   const [currentView, setCurrentView] = useState<string>('overview');
   const [selectedFlagCaseId, setSelectedFlagCaseId] = useState<string | null>(null);
   const [overviewData, setOverviewData] = useState<any>(null);
   const [contractors, setContractors] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light'); // Default to light elegant theme
+  const [theme, setTheme] = useState<'light' | 'dark'>('light'); // Default to light theme
   const [consoleLogs, setConsoleLogs] = useState<ConsoleLog[]>([]);
 
   const pushWeb3Log = (source: string, message: string, type: 'info' | 'success' | 'warn' | 'hex' = 'info') => {
@@ -76,12 +78,14 @@ function App() {
     }
   }, [theme]);
 
-  const handleLogin = (selectedRole: string, authToken: string, authUser: string) => {
+  const handleLogin = (selectedRole: string, authToken: string, authUser: string, authDisplayName?: string) => {
     setRole(selectedRole);
     setToken(authToken);
     setUsername(authUser);
+    setDisplayName(authDisplayName || authUser);
     setAuthError(null);
-    pushWeb3Log("Authorization", `Logged in under profile: [${selectedRole.toUpperCase()}] (${authUser}) with valid JWT`, "success");
+    setInlineNotice(null);
+    pushWeb3Log("Authorization", `Logged in under profile: [${selectedRole.toUpperCase()}] (${authDisplayName || authUser}) with valid JWT`, "success");
     if (selectedRole === 'public') {
       setCurrentView('transparency');
     } else {
@@ -89,28 +93,51 @@ function App() {
     }
   };
 
+  const handleExplorePublic = () => {
+    setRole('public');
+    setToken(null);
+    setUsername('citizen_public');
+    setDisplayName('Public Citizen');
+    setAuthError(null);
+    setInlineNotice(null);
+    setCurrentView('transparency');
+    pushWeb3Log("Public Access", "Entered Public Transparency Portal (Unauthenticated session).", "info");
+  };
+
   const handleLogout = (logoutMessage?: string) => {
     sessionStorage.removeItem('auditchain_token');
     sessionStorage.removeItem('auditchain_role');
     sessionStorage.removeItem('auditchain_user');
+    sessionStorage.removeItem('auditchain_display_name');
     setRole(null);
     setToken(null);
     setUsername(null);
+    setDisplayName(null);
+    setInlineNotice(null);
     if (logoutMessage) {
       setAuthError(logoutMessage);
       pushWeb3Log("Auth Security", `Session terminated: ${logoutMessage}`, "warn");
     } else {
       setAuthError(null);
-      pushWeb3Log("Authorization", `Session terminated for profile: [${role?.toUpperCase()}]`, "warn");
+      pushWeb3Log("Authorization", `Session ended. Redirecting to authentication screen.`, "info");
     }
   };
 
-  const handleAuthError = (errMessage: string) => {
-    handleLogout(errMessage);
+  const handleAuthError = (errMessage: string, isForbidden: boolean = false) => {
+    if (isForbidden) {
+      // 403 Forbidden: show inline warning without logging out
+      setInlineNotice(errMessage || "Access denied for your role.");
+      pushWeb3Log("RBAC Policy", `Action rejected: ${errMessage}`, "warn");
+      setTimeout(() => setInlineNotice(null), 7000);
+    } else {
+      // 401 Unauthorized: session expired -> log out
+      handleLogout(errMessage || "Session expired. Please log in again.");
+    }
   };
 
   const navigateToView = (view: string, targetId?: string) => {
     setCurrentView(view);
+    setInlineNotice(null);
     if (targetId) {
       setSelectedFlagCaseId(targetId);
       pushWeb3Log("Dossier Index", `Direct navigation to exhibit case file [${targetId}]`, "info");
@@ -131,9 +158,13 @@ function App() {
 
       const res = await fetch('/api/admin/reseed', { method: 'POST', headers });
 
-      if (res.status === 401 || res.status === 403) {
-        const errData = await res.json().catch(() => ({}));
-        handleAuthError(errData.detail || 'Unauthorized (401/403). Only Lead Auditors can reset the database.');
+      if (res.status === 401) {
+        handleAuthError("Session expired (401). Please log in again.", false);
+        return;
+      }
+
+      if (res.status === 403) {
+        handleAuthError("Unauthorized (403). Only Lead Auditors can reset the database.", true);
         return;
       }
 
@@ -147,7 +178,7 @@ function App() {
     }
   };
 
-  if (!role || !token) {
+  if (!role && !token) {
     return (
       <div className="bg-dossier-bg min-h-screen text-dossier-text">
         <div className="absolute top-4 right-4 flex gap-2 z-50">
@@ -158,7 +189,7 @@ function App() {
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         </div>
-        <Login onLogin={handleLogin} initialError={authError} />
+        <Login onLogin={handleLogin} onExplorePublic={handleExplorePublic} initialError={authError} />
         <div className="h-10"></div>
       </div>
     );
@@ -181,20 +212,24 @@ function App() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Seed Trigger Button for Demo judges */}
-            <button
-              onClick={handleTriggerReseed}
-              className="text-[9px] border border-dossier-border text-dossier-text hover:bg-dossier-text/5 px-2 py-1 font-bold uppercase transition-colors cursor-pointer"
-            >
-              Reset / Seed Ledger
-            </button>
+            {/* Seed Trigger Button for Lead Auditor */}
+            {role === 'auditor' && (
+              <button
+                onClick={handleTriggerReseed}
+                className="text-[9px] border border-dossier-border text-dossier-text hover:bg-dossier-text/5 px-2 py-1 font-bold uppercase transition-colors cursor-pointer"
+              >
+                Reset / Seed Ledger
+              </button>
+            )}
 
             {/* Profile Credentials Display */}
             <div className="flex items-center gap-2 border-l border-dossier-border pl-4 text-dossier-text">
               <User size={14} className="text-dossier-muted" />
               <span className="font-bold uppercase text-[9px]">
-                CREDENTIAL: <span className={role === 'auditor' ? 'text-status-flagged' : role === 'officer' ? 'text-status-review' : 'text-status-verified'}>{role}</span>
-                {username && <span className="text-dossier-muted font-normal ml-1">({username})</span>}
+                CREDENTIAL: <span className={role === 'auditor' ? 'text-status-flagged' : role === 'officer' ? 'text-status-review' : 'text-status-verified'}>
+                  {role}
+                </span>
+                {displayName && <span className="text-dossier-muted font-normal ml-1">({displayName})</span>}
               </span>
             </div>
 
@@ -202,21 +237,52 @@ function App() {
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="p-1.5 border border-dossier-border bg-dossier-card hover:bg-dossier-text/5 cursor-pointer"
+              title="Toggle Light / Dark Mode"
             >
               {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
             </button>
 
-            {/* Logout */}
-            <button
-              onClick={() => handleLogout()}
-              className="p-1.5 border border-status-flagged text-status-flagged hover:bg-status-flagged/5 cursor-pointer font-bold uppercase text-[9px]"
-              title="Logout Session"
-            >
-              <LogOut size={14} />
-            </button>
+            {/* Logout / Switch Role */}
+            {token ? (
+              <button
+                onClick={() => handleLogout()}
+                className="p-1.5 border border-status-flagged text-status-flagged hover:bg-status-flagged/5 cursor-pointer font-bold uppercase text-[9px] flex items-center gap-1"
+                title="Logout Session"
+              >
+                <LogOut size={14} />
+                <span className="hidden sm:inline">Logout</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => handleLogout()}
+                className="p-1.5 border border-status-verified text-status-verified hover:bg-status-verified/5 cursor-pointer font-bold uppercase text-[9px] flex items-center gap-1"
+                title="Sign In"
+              >
+                <LogIn size={14} />
+                <span>Sign In</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
+
+      {/* Inline RBAC Warning Notice */}
+      {inlineNotice && (
+        <div className="max-w-[1600px] mx-auto px-6 pt-4">
+          <div className="border border-status-flagged bg-status-flagged/10 text-status-flagged p-3 font-mono text-xs flex items-center justify-between">
+            <div className="flex items-center gap-2 font-bold">
+              <AlertCircle size={15} />
+              <span>{inlineNotice}</span>
+            </div>
+            <button 
+              onClick={() => setInlineNotice(null)}
+              className="text-[10px] uppercase font-bold hover:underline cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Layout Area */}
       <div className="max-w-[1600px] mx-auto px-6 py-8">
@@ -328,17 +394,19 @@ function App() {
             {currentView === 'flags' && (
               <FlaggedCases
                 initialCaseId={selectedFlagCaseId}
-                role={role}
+                role={role || 'public'}
                 token={token}
                 onAuthError={handleAuthError}
+                onPushWeb3Log={pushWeb3Log}
               />
             )}
 
             {currentView === 'repairs' && (
               <RoadRepairs
-                role={role}
+                role={role || 'public'}
                 token={token}
                 onAuthError={handleAuthError}
+                onPushWeb3Log={pushWeb3Log}
               />
             )}
 
@@ -362,3 +430,4 @@ function App() {
 }
 
 export default App;
+

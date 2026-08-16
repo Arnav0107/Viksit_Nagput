@@ -65,7 +65,7 @@ if ($AnvilRunning) {
     Write-Host "[OK] Anvil Ethereum node is already active on port 8545." -ForegroundColor Green
 } else {
     Write-Host "[INFO] Starting Anvil Ethereum node on port 8545 in background..." -ForegroundColor Yellow
-    Start-Process -FilePath "anvil" -ArgumentList "--port 8545" -WindowStyle Hidden
+    Start-Process -FilePath "anvil" -ArgumentList "--port 8545 --state anvil-state.json" -WindowStyle Hidden
     Start-Sleep -Seconds 2
     Write-Host "[OK] Anvil node started." -ForegroundColor Green
 }
