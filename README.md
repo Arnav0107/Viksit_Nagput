@@ -94,4 +94,4 @@ The login screen features 1-click credential presets for demo and jury evaluatio
 - **Live Sealed Ledger Chronology**: Real-time querying of smart contract event records with verified transaction hashes.
 
 ### 6. Web3 Monospace Console (`frontend/src/components/Web3Console.tsx`)
-- Fixed collapsible bottom terminal streaming cryptographic events, transaction hashes, and EVM status updates in real time.
+- Fixed the collapsible bottom terminal streaming cryptographic events, transaction hashes, and EVM status updates in real time.
