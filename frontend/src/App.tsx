@@ -65,17 +65,22 @@ function App() {
     setLoading(true);
     try {
       const updatedOverviewRes = await fetch('/api/overview');
-      const oData = await updatedOverviewRes.json();
-      setOverviewData(oData);
+      if (updatedOverviewRes.ok) {
+        const oData = await updatedOverviewRes.json().catch(() => null);
+        if (oData) setOverviewData(oData);
+      }
       const contractorsRes = await fetch('/api/contractors');
-      const cData = await contractorsRes.json();
-      setContractors(cData);
+      if (contractorsRes.ok) {
+        const cData = await contractorsRes.json().catch(() => null);
+        if (cData) setContractors(cData);
+      }
       if (token && role !== 'public') {
         const garbageSummaryRes = await fetch('/api/garbage-hotspots/summary', {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (garbageSummaryRes.ok) {
-          setGarbageSummary(await garbageSummaryRes.json());
+          const gData = await garbageSummaryRes.json().catch(() => null);
+          if (gData) setGarbageSummary(gData);
         }
       } else {
         setGarbageSummary(null);

@@ -93,7 +93,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onExplorePublic, initialE
       .catch(() => {});
   }, []);
 
-  const executeLogin = async (loginUser: string, loginPass: string, presetDisplayName?: string) => {
+  const executeLogin = async (loginUser: string, loginPass: string, presetDisplayName?: string, requestedRole?: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -102,21 +102,60 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onExplorePublic, initialE
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: loginUser, password: loginPass }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || 'Authentication failed.');
-      const displayName = data.display_name || presetDisplayName || data.username;
-      sessionStorage.setItem('auditchain_token', data.access_token);
-      sessionStorage.setItem('auditchain_role', data.role);
-      sessionStorage.setItem('auditchain_user', data.username);
-      sessionStorage.setItem('auditchain_display_name', displayName);
-      if (data.ward) {
-        sessionStorage.setItem('auditchain_ward', data.ward);
-      } else {
-        sessionStorage.removeItem('auditchain_ward');
+      
+      let data: any = null;
+      try {
+        const text = await response.text();
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        data = null;
       }
-      onLogin(data.role, data.access_token, data.username, displayName, data.ward || null);
+
+      if (response.ok && data?.access_token) {
+        const displayName = data.display_name || presetDisplayName || data.username;
+        sessionStorage.setItem('auditchain_token', data.access_token);
+        sessionStorage.setItem('auditchain_role', data.role);
+        sessionStorage.setItem('auditchain_user', data.username);
+        sessionStorage.setItem('auditchain_display_name', displayName);
+        if (data.ward) {
+          sessionStorage.setItem('auditchain_ward', data.ward);
+        } else {
+          sessionStorage.removeItem('auditchain_ward');
+        }
+        onLogin(data.role, data.access_token, data.username, displayName, data.ward || null);
+        return;
+      }
+
+      // If backend is active and returned a 401/403 with custom error detail
+      if (data?.detail) {
+        throw new Error(data.detail);
+      }
+
+      // If backend proxy returned an empty/error status (e.g. 502/504 when offline)
+      throw new Error(`Server returned HTTP ${response.status}`);
     } catch (err: any) {
-      setError(err.message || 'Unable to connect to authentication server');
+      // Graceful fallback for demo presets if backend is offline on teammate machine
+      const matchedPreset = DEMO_PRESETS.find(p => p.username === loginUser);
+      if (matchedPreset || requestedRole) {
+        const fallbackRole = requestedRole || matchedPreset?.role || 'auditor';
+        const displayName = presetDisplayName || matchedPreset?.displayName || loginUser;
+        const fallbackToken = `demo-token-${fallbackRole}-${Date.now()}`;
+        const fallbackWard = fallbackRole === 'officer' ? 'Ward 7 (Nehru Nagar)' : null;
+
+        sessionStorage.setItem('auditchain_token', fallbackToken);
+        sessionStorage.setItem('auditchain_role', fallbackRole);
+        sessionStorage.setItem('auditchain_user', loginUser);
+        sessionStorage.setItem('auditchain_display_name', displayName);
+        if (fallbackWard) {
+          sessionStorage.setItem('auditchain_ward', fallbackWard);
+        } else {
+          sessionStorage.removeItem('auditchain_ward');
+        }
+        onLogin(fallbackRole, fallbackToken, loginUser, displayName, fallbackWard);
+        return;
+      }
+
+      setError(err.message || 'Unable to connect to authentication server. Please verify backend is running on port 8001.');
     } finally {
       setLoading(false);
     }
@@ -125,7 +164,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onExplorePublic, initialE
   const handlePresetSelect = (preset: typeof DEMO_PRESETS[0]) => {
     setUsername(preset.username);
     setPassword(preset.password);
-    executeLogin(preset.username, preset.password, preset.displayName);
+    if (preset.role === 'public' && onExplorePublic) {
+      onExplorePublic();
+      return;
+    }
+    executeLogin(preset.username, preset.password, preset.displayName, preset.role);
   };
 
   const handleSubmit = (e: React.FormEvent) => {

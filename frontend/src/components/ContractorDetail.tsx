@@ -26,11 +26,11 @@ export const ContractorDetail: React.FC<ContractorDetailProps> = ({ contractors,
       setLoading(true);
       try {
         const historyRes = await fetch(`/api/contractors/${selectedId}/tonnage`);
-        const historyData = await historyRes.json();
-        setHistory(historyData);
+        const historyData = historyRes.ok ? await historyRes.json().catch(() => []) : [];
+        setHistory(Array.isArray(historyData) ? historyData : []);
 
         const logsRes = await fetch(`/api/weighbridge/logs?contractor=${selectedId}&limit=10`);
-        const logsData = await logsRes.json();
+        const logsData = logsRes.ok ? await logsRes.json().catch(() => ({})) : {};
         setRecentLogs(logsData.logs || []);
       } catch (err) {
         console.error("Error loading contractor data", err);

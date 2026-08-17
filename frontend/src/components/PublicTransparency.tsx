@@ -31,8 +31,8 @@ export const PublicTransparency: React.FC<PublicTransparencyProps> = ({ data: in
   useEffect(() => {
     if (!overviewData) {
       fetch('/api/overview')
-        .then((res) => res.json())
-        .then((d) => setOverviewData(d))
+        .then((res) => res.ok ? res.json().catch(() => null) : null)
+        .then((d) => { if (d) setOverviewData(d); })
         .catch((err) => console.error("Error loading overview data", err));
     }
   }, [overviewData]);
@@ -45,8 +45,8 @@ export const PublicTransparency: React.FC<PublicTransparencyProps> = ({ data: in
         fetch('/api/road-repairs')
       ]);
 
-      const wbData = await wbRes.json();
-      const roadData = await roadRes.json();
+      const wbData = wbRes.ok ? await wbRes.json().catch(() => []) : [];
+      const roadData = roadRes.ok ? await roadRes.json().catch(() => []) : [];
 
       const wbSealed = (Array.isArray(wbData) ? wbData : [])
         .filter((item: any) => item.tx_hash || item.status === 'confirmed_fraud' || item.status === 'cleared')
