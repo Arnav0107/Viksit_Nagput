@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Camera, CheckCircle, AlertTriangle, Send, RefreshCw, X, MapPin, ShieldCheck, Image as ImageIcon, FileVideo2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Camera, CheckCircle, AlertTriangle, Send, RefreshCw, X, MapPin, ShieldCheck, Image as ImageIcon, FileVideo2, Download } from 'lucide-react';
 
 const WARD_CENTERS: Record<string, { lat: number; lng: number }> = {
     'Laxmi Nagar': { lat: 21.1255, lng: 79.0680 },
@@ -238,9 +239,15 @@ export const GarbageReportForm: React.FC = () => {
                                 )}
                             </div>
 
-                            <button type="button" onClick={resetForm} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 px-4 rounded-xl transition-all cursor-pointer text-sm">
-                                Submit Another Report
-                            </button>
+                            <div className="w-full flex flex-col sm:flex-row gap-3">
+                                <button type="button" onClick={() => window.print()} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition-all cursor-pointer text-sm inline-flex items-center justify-center gap-2">
+                                    <Download className="w-4 h-4" />
+                                    Download PDF Receipt
+                                </button>
+                                <button type="button" onClick={resetForm} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 px-4 rounded-xl transition-all cursor-pointer text-sm inline-flex items-center justify-center">
+                                    Submit Another Report
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -373,6 +380,84 @@ export const GarbageReportForm: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {submittedData && createPortal(
+                <div id="complaint-receipt-pdf" className="hidden print:block p-8 border-2 border-slate-300 rounded-2xl bg-white max-w-2xl mx-auto">
+                    {/* Official Header */}
+                    <div className="text-center border-b-2 border-slate-950 pb-6 mb-6">
+                        <div className="font-extrabold text-2xl tracking-wider text-slate-950 uppercase">Nagpur Municipal Corporation</div>
+                        <div className="text-xs font-bold tracking-widest text-slate-500 uppercase mt-1">AuditChain Transparency Portal • Sanitation Watch Receipt</div>
+                    </div>
+
+                    {/* Subheading */}
+                    <div className="flex justify-between items-center mb-6">
+                        <div>
+                            <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">Complaint Reference</div>
+                            <div className="text-lg font-mono font-extrabold text-slate-950">{submittedData.report?.id}</div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">Date & Time</div>
+                            <div className="text-sm font-bold text-slate-950">
+                                {submittedData.report?.created_at ? new Date(submittedData.report.created_at).toLocaleString() : new Date().toLocaleString()}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Main content grid */}
+                    <div className="grid grid-cols-2 gap-4 border border-slate-200 rounded-xl p-4 mb-6 bg-slate-50 text-xs">
+                        <div>
+                            <span className="text-slate-500 font-semibold block mb-1">Ward Name</span>
+                            <span className="font-bold text-slate-950 text-sm">{submittedData.hotspot?.ward_name || submittedData.report?.ward_name || 'Unspecified'}</span>
+                        </div>
+                        <div>
+                            <span className="text-slate-500 font-semibold block mb-1">Hotspot Association</span>
+                            <span className="font-bold text-slate-950 text-sm">
+                                {submittedData.report?.ai_is_duplicate_of_hotspot ? `Linked to Hotspot ${submittedData.hotspot?.id}` : `New Hotspot Created (${submittedData.hotspot?.id})`}
+                            </span>
+                        </div>
+                        <div className="col-span-2">
+                            <span className="text-slate-500 font-semibold block mb-1">GPS Location Coordinates</span>
+                            <span className="font-mono font-bold text-slate-950 text-sm">
+                                {location ? `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}` : 'N/A'}
+                            </span>
+                        </div>
+                        <div className="col-span-2 border-t border-slate-200 pt-3">
+                            <span className="text-slate-500 font-semibold block mb-1">Citizen Complaint Description</span>
+                            <p className="text-slate-800 m-0 font-normal text-sm leading-relaxed">{description}</p>
+                        </div>
+                    </div>
+
+                    {/* Evidence Section */}
+                    {photoPreview && (
+                        <div className="mb-6">
+                            <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">Submitted Photo Evidence</div>
+                            <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-100 max-h-60 flex items-center justify-center p-2">
+                                <img src={photoPreview} alt="Evidence" className="max-h-56 object-contain" />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Verification and signature block */}
+                    <div className="border-t border-slate-200 pt-6 mt-6">
+                        <div className="flex justify-between items-end">
+                            <div className="max-w-xs">
+                                <div className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider mb-2">
+                                    <ShieldCheck className="w-3.5 h-3.5" />
+                                    On-Chain Verified
+                                </div>
+                                <p className="text-[10px] text-slate-500 leading-normal m-0">
+                                    This complaint log has been registered under the NMC AuditChain Nagpur smart contract audit framework for garbage disposal monitoring.
+                                </p>
+                            </div>
+                            <div className="text-right">
+                                <div className="w-32 h-10 border-b border-slate-900 mx-auto mb-1 flex items-center justify-center text-xs italic font-serif text-slate-400">NMC Officer</div>
+                                <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Authorized Signature</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 };

@@ -13,6 +13,10 @@ from app.db import (
     Vehicle,
     DumpingGroundGateLog,
     init_db,
+    CitizenComplaint,
+    GarbageHotspot,
+    GarbageReport,
+    DustbinRequest,
 )
 from app.anomaly import run_anomaly_detection, calculate_benchmarks
 from app.blockchain import lock_weighbridge_record, lock_road_repair_record
@@ -35,6 +39,10 @@ def generate_route_coordinates(start_lat, start_lon, end_lat, end_lon, steps=15)
 
 def seed_data(db: Session):
     # Clear existing data
+    db.query(CitizenComplaint).delete()
+    db.query(GarbageReport).delete()
+    db.query(GarbageHotspot).delete()
+    db.query(DustbinRequest).delete()
     db.query(RoadRepair).delete()
     db.query(GPSTrip).delete()
     db.query(GPSLog).delete()

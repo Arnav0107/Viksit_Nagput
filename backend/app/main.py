@@ -1,5 +1,8 @@
 import os
 import shutil
+from dotenv import load_dotenv
+env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+load_dotenv(env_path)
 from fastapi import FastAPI, Depends, HTTPException, Query, status, Request, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -10,6 +13,8 @@ from typing import List, Optional, Set
 import uuid
 import hashlib
 from pydantic import BaseModel
+import cloudinary
+import cloudinary.uploader
 
 from app.db import (
     init_db,
@@ -965,6 +970,22 @@ UPLOAD_DIR = os.path.join(os.path.dirname(
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
+# Cloudinary Integration (automatically enabled if credentials are set in environment variables)
+CLOUDINARY_ENABLED = False
+cloudinary_url = os.getenv("CLOUDINARY_URL")
+if cloudinary_url or (os.getenv("CLOUDINARY_CLOUD_NAME") and os.getenv("CLOUDINARY_API_KEY")):
+    try:
+        if not cloudinary_url:
+            cloudinary.config(
+                cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+                api_key=os.getenv("CLOUDINARY_API_KEY"),
+                api_secret=os.getenv("CLOUDINARY_API_SECRET")
+            )
+        CLOUDINARY_ENABLED = True
+        print("[OK] Cloudinary integrated successfully.")
+    except Exception as e:
+        print(f"[WARNING] Failed to initialize Cloudinary: {str(e)}")
+
 
 @app.post("/api/complaints")
 async def submit_citizen_complaint(
@@ -985,17 +1006,7 @@ async def submit_citizen_complaint(
             detail="Complaint description is required."
         )
 
-    # Save photo file locally
-    file_ext = os.path.splitext(photo.filename)[
-        1] if photo.filename else ".jpg"
-    if not file_ext:
-        file_ext = ".jpg"
-    filename = f"complaint_{uuid.uuid4().hex[:12]}{file_ext}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(photo.file, buffer)
-
-    photo_url = f"/uploads/{filename}"
+    photo_url = _save_uploaded_file(photo, "complaint")
     complaint_id = f"CMP-{uuid.uuid4().hex[:8].upper()}"
 
     new_complaint = CitizenComplaint(
@@ -1062,11 +1073,25 @@ def list_citizen_complaints(
 
 
 def _save_uploaded_file(upload: UploadFile, prefix: str) -> str:
+    if CLOUDINARY_ENABLED:
+        try:
+            upload.file.seek(0)
+            upload_result = cloudinary.uploader.upload(
+                upload.file,
+                folder="viksit_nagpur",
+                public_id=f"{prefix}_{uuid.uuid4().hex[:12]}"
+            )
+            return upload_result.get("secure_url")
+        except Exception as e:
+            print(f"[ERROR] Cloudinary upload failed: {str(e)}, falling back to local storage.")
+
+    # Local fallback
     file_ext = os.path.splitext(upload.filename)[1] if upload.filename else ""
     if not file_ext:
         file_ext = ".bin"
     filename = f"{prefix}_{uuid.uuid4().hex[:12]}{file_ext}"
     file_path = os.path.join(UPLOAD_DIR, filename)
+    upload.file.seek(0)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(upload.file, buffer)
     return f"/uploads/{filename}"
