@@ -267,11 +267,11 @@ function App() {
 
           {/* --- TRADITIONAL NAGPUR WATERMARK --- */}
           <div
-            className="absolute inset-x-0 bottom-0 h-[80%] pointer-events-none z-0 opacity-40 bg-bottom bg-no-repeat bg-contain"
+            className="absolute inset-x-0 bottom-0 h-[80%] pointer-events-none z-0 opacity-85 bg-bottom bg-no-repeat bg-contain transition-opacity duration-300"
             style={{
               backgroundImage: "url('/deekshabhoomi.svg')",
-              WebkitMaskImage: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)",
-              maskImage: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)"
+              WebkitMaskImage: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0) 100%)",
+              maskImage: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0) 100%)"
             }}
           />
 
