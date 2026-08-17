@@ -102,7 +102,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onExplorePublic, initialE
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: loginUser, password: loginPass }),
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({ detail: 'Authentication server error or invalid response.' }));
       if (!response.ok) throw new Error(data.detail || 'Authentication failed.');
       const displayName = data.display_name || presetDisplayName || data.username;
       sessionStorage.setItem('auditchain_token', data.access_token);
