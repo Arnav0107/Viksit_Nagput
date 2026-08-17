@@ -60,7 +60,7 @@ from app.auth import (
     JWTError
 )
 
-app = FastAPI(title="AuditChain Nagpur API",
+app = FastAPI(title="TrashTrail Nagpur API",
               description="Civic-tech audit and anomaly checker for NMC")
 
 # Enable CORS for frontend integration
@@ -122,7 +122,7 @@ def startup_event():
         print("!" * 80 + "\n")
 
     print("\n" + "=" * 68)
-    print(" [NMC] AuditChain Nagpur - Demo Login Credentials (RBAC Enabled)")
+    print(" [NMC] TrashTrail Nagpur - Demo Login Credentials (RBAC Enabled)")
     print("=" * 68)
     for cred in DEMO_ACCOUNTS_METADATA:
         print(f" [{cred['role'].upper():<7}] Username: {cred['username']:<16} Password: {cred['password']:<12} ({cred['display_name']})")

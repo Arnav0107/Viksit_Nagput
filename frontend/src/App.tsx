@@ -9,7 +9,7 @@ import { GarbageHotspotList } from './components/GarbageHotspotList';
 import { DustbinRequestForm } from './components/DustbinRequestForm';
 import { DustbinRequestQueue } from './components/DustbinRequestQueue';
 import { Login } from './components/Login';
-import { Web3Console } from './components/Web3Console';
+import deekshabhoomiWatermark from './assets/dikshabhumi-navbar-crop.svg';
 
 interface ConsoleLog {
   timestamp: string;
@@ -56,7 +56,7 @@ function App() {
   };
 
   useEffect(() => {
-    pushWeb3Log("Solidity System", "AuditChain.sol smart contract initialized on EVM.", "info");
+    pushWeb3Log("Solidity System", "TrashTrail smart contract initialized on EVM.", "info");
     pushWeb3Log("Solidity System", "Contract Address: 0x5FbDB2315678afecb367f032d93F642f64180aa3", "hex");
     pushWeb3Log("Solidity System", "NMC Administrator signature seal registered on-chain.", "success");
   }, []);
@@ -222,8 +222,9 @@ function App() {
             >
               <span className="material-symbols-outlined text-[24px]">menu</span>
             </button>
-            <div className="text-xl text-primary font-bold tracking-tight truncate max-w-[200px] md:max-w-none">
-              AuditChain Nagpur
+            <div className="flex items-center gap-2.5 text-xl text-primary font-bold tracking-tight truncate max-w-[200px] md:max-w-none">
+              <img src="/trashtrail-logo.jpg" alt="TrashTrail Logo" className="w-7 h-7 rounded-full object-cover border border-amber-500/40 shadow-sm shrink-0" />
+              <span>TrashTrail Nagpur</span>
             </div>
           </div>
 
@@ -265,28 +266,22 @@ function App() {
         {/* Sidebar */}
         <aside className={`${isMobileMenuOpen ? 'fixed inset-y-0 left-0 z-50 flex shadow-2xl' : 'hidden'} md:flex flex-col w-64 shrink-0 p-4 transition-transform overflow-y-auto relative ${premiumVibe ? 'bg-slate-950 text-slate-200 border-r border-slate-800' : 'bg-white text-slate-900 border-r border-slate-200'}`}>
 
-          {/* --- TRADITIONAL NAGPUR WATERMARK --- */}
-          <div
-            className="absolute inset-x-0 bottom-0 h-[80%] pointer-events-none z-0 opacity-85 bg-bottom bg-no-repeat bg-contain transition-opacity duration-300"
-            style={{
-              backgroundImage: "url('/deekshabhoomi.svg')",
-              WebkitMaskImage: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0) 100%)",
-              maskImage: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 55%, rgba(0,0,0,0) 100%)"
-            }}
-          />
-
           <div className="relative z-10 flex flex-col h-full">
-            <div className="mb-6 flex justify-between items-start">
-              <div>
-                <h2 className={`text-sm font-bold tracking-tight ${premiumVibe ? 'text-slate-200' : 'text-slate-900'}`}>Citizen Portal</h2>
-                <p className={`text-xs font-medium ${premiumVibe ? 'text-slate-500' : 'text-slate-500'}`}>Nagpur Transparency</p>
+            <div className="mb-5 flex justify-between items-start">
+              <div className="flex items-center gap-2.5">
+                <img src="/trashtrail-logo.jpg" alt="TrashTrail Logo" className="w-7 h-7 rounded-full object-cover border border-amber-500/40 shrink-0" />
+                <div>
+                  <h2 className={`text-sm font-bold tracking-tight ${premiumVibe ? 'text-slate-200' : 'text-slate-900'}`}>{role === 'public' ? 'Citizen Portal' : 'NMC Control Grid'}</h2>
+                  <p className={`text-xs font-medium ${premiumVibe ? 'text-slate-400' : 'text-slate-500'}`}>TrashTrail Nagpur</p>
+                </div>
               </div>
               <button className="md:hidden text-slate-400 p-1 cursor-pointer" onClick={() => setIsMobileMenuOpen(false)}>
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            <nav className="flex flex-col gap-1.5 flex-1 overflow-y-auto hide-scrollbar">
+            {/* Nav Items */}
+            <nav className="flex flex-col gap-1.5 shrink-0">
               {navItems.map(item => {
                 const isActive = currentView === item.view;
                 return (
@@ -307,7 +302,27 @@ function App() {
               })}
             </nav>
 
-            <div className={`mt-auto pt-4 border-t flex flex-col gap-4 ${premiumVibe ? 'border-slate-800' : 'border-slate-200'}`}>
+            {/* --- DEEKSHABHOOMI STUPA & GATEWAY VECTOR WATERMARK --- */}
+            {role !== 'public' ? (
+              <div className="mt-auto mb-0 pt-3 px-0 select-none pointer-events-none">
+                <img
+                  src={deekshabhoomiWatermark}
+                  alt="Deekshabhoomi Nagpur Stupa Watermark"
+                  className="w-full h-auto block opacity-90 transition-opacity duration-300 drop-shadow-sm"
+                />
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center my-4 px-2 select-none pointer-events-none overflow-hidden min-h-[110px] max-h-[220px]">
+                <img
+                  src={deekshabhoomiWatermark}
+                  alt="Deekshabhoomi Nagpur Stupa Watermark"
+                  className="w-full h-auto max-h-full object-contain opacity-85 transition-opacity duration-300 drop-shadow-sm"
+                />
+              </div>
+            )}
+
+            {/* User Block & Action Buttons */}
+            <div className={`mt-0 pt-4 border-t flex flex-col gap-4 ${premiumVibe ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-3 px-1">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${premiumVibe ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
                   <span className="material-symbols-outlined text-[18px]">person</span>
@@ -377,11 +392,6 @@ function App() {
           </div>
         </main>
       </div>
-
-      {/* ── Web3 Console ──────────────────────────────────────────── */}
-      <footer className="relative z-20 shrink-0">
-        <Web3Console logs={consoleLogs} onClear={() => setConsoleLogs([])} />
-      </footer>
     </div>
   );
 }

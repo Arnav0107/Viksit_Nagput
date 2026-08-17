@@ -362,12 +362,22 @@ input:focus, textarea:focus, select:focus {
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  z-index: 2;
+  box-sizing: border-box;
+}
+
+.search-input {
   padding: 0 12px 0 36px;
   font-size: 13px;
   color: var(--color-text-base);
   background: #F9FAFB;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
   outline: none;
   width: 100%;
+  height: 38px;
   transition: border-color 0.15s, background 0.15s;
 }
 .search-input:focus { border-color: var(--color-accent); background: #fff; }
@@ -528,38 +538,118 @@ input:focus, textarea:focus, select:focus {
   transform: none;
 }
 
-/* ─── Timeline ───────────────────────────────────────────────────── */
-.timeline-step {
-  position: relative;
-  padding-left: 36px;
-}
-.timeline-step::before {
-  content: '';
-  position: absolute;
-  left: 11px;
-  top: 24px;
-  bottom: 0;
-  width: 2px;
-  background-color: var(--color-surface-container-highest);
-  z-index: 1;
-}
-.timeline-step:last-child::before {
-  display: none;
+
+/* ─── Login Page Custom Theme & Seal Stamp Animation ─────────────── */
+@keyframes sealStampDown {
+  0% {
+    transform: scale(1.35) rotate(-6deg);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.12;
+  }
 }
 
-.timeline-dot {
+.login-seal-watermark {
   position: absolute;
-  left: 0;
-  top: 0;
-  width: 24px;
-  height: 24px;
+  top: -85px;
+  left: -65px;
+  width: 260px;
+  height: 260px;
+  pointer-events: none;
+  z-index: 1;
+  transform-origin: center center;
+  animation: sealStampDown 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-seal-watermark {
+    animation: none !important;
+    transform: scale(1) rotate(0deg) !important;
+    opacity: 0.12 !important;
+  }
+}
+
+/* ─── Animated Pulse Ward Markers ────────────────────────────────── */
+@keyframes wardPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6), 0 3px 10px rgba(0,0,0,0.12);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(245, 158, 11, 0), 0 3px 10px rgba(0,0,0,0.12);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0), 0 3px 10px rgba(0,0,0,0.12);
+  }
+}
+
+.custom-ward-marker-wrapper {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-ward-badge {
+  position: relative;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
+  background: #FFFFFF;
+  border: 2px solid #F59E0B;
+  color: #B45309;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: -0.02em;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  z-index: 2;
+  box-shadow: 0 3px 10px rgba(245, 158, 11, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.95);
+  cursor: pointer;
+  font-family: inherit;
+  animation: wardPulse 2.5s infinite;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease, border-color 0.2s ease;
+  user-select: none;
+}
+
+.custom-ward-marker-wrapper:hover .custom-ward-badge {
+  transform: scale(1.22);
+  background: #FFFBEB;
+  border-color: #D97706;
+  color: #78350F;
+  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.45), 0 0 0 3px rgba(245, 158, 11, 0.35);
+}
+
+/* Cartographic Survey Corner Ticks (Amber Gold) */
+.map-corner-tick {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  z-index: 1001;
+}
+.map-corner-tick-tl {
+  top: 8px;
+  left: 8px;
+  border-top: 2px solid #F59E0B;
+  border-left: 2px solid #F59E0B;
+}
+.map-corner-tick-tr {
+  top: 8px;
+  right: 8px;
+  border-top: 2px solid #F59E0B;
+  border-right: 2px solid #F59E0B;
+}
+.map-corner-tick-bl {
+  bottom: 8px;
+  left: 8px;
+  border-bottom: 2px solid #F59E0B;
+  border-left: 2px solid #F59E0B;
+}
+.map-corner-tick-br {
+  bottom: 8px;
+  right: 8px;
+  border-bottom: 2px solid #F59E0B;
+  border-right: 2px solid #F59E0B;
 }
 
 /* Print Layout for PDF complaint receipt */

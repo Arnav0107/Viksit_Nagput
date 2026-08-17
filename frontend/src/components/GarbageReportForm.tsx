@@ -372,9 +372,9 @@ export const GarbageReportForm: React.FC = () => {
                                 )}
                             </button>
 
-                            <div className="flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-400 mt-1">
-                                <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
-                                AuditChain Nagpur • Public Sanitation Watch
+                            <div className="flex items-center justify-center gap-2 text-center text-[11px] text-slate-400 mt-1 font-semibold">
+                                <img src="/trashtrail-logo.jpg" alt="TrashTrail Logo" className="w-4 h-4 rounded-full object-cover shrink-0" />
+                                TrashTrail Nagpur • Public Sanitation Watch
                             </div>
                         </form>
                     )}
@@ -386,7 +386,10 @@ export const GarbageReportForm: React.FC = () => {
                     {/* Official Header */}
                     <div className="text-center border-b-2 border-slate-950 pb-6 mb-6">
                         <div className="font-extrabold text-2xl tracking-wider text-slate-950 uppercase">Nagpur Municipal Corporation</div>
-                        <div className="text-xs font-bold tracking-widest text-slate-500 uppercase mt-1">AuditChain Transparency Portal • Sanitation Watch Receipt</div>
+                        <div className="text-xs font-bold tracking-widest text-slate-500 uppercase mt-1 flex items-center justify-center gap-1.5">
+                            <img src="/trashtrail-logo.jpg" alt="TrashTrail Logo" className="w-4 h-4 rounded-full object-cover shrink-0" />
+                            <span>TrashTrail Transparency Portal • Sanitation Watch Receipt</span>
+                        </div>
                     </div>
 
                     {/* Subheading */}
@@ -446,7 +449,7 @@ export const GarbageReportForm: React.FC = () => {
                                     On-Chain Verified
                                 </div>
                                 <p className="text-[10px] text-slate-500 leading-normal m-0">
-                                    This complaint log has been registered under the NMC AuditChain Nagpur smart contract audit framework for garbage disposal monitoring.
+                                    This complaint log has been registered under the NMC TrashTrail Nagpur smart contract audit framework for garbage disposal monitoring.
                                 </p>
                             </div>
                             <div className="text-right">

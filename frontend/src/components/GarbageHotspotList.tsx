@@ -325,7 +325,10 @@ export const GarbageHotspotList: React.FC<GarbageHotspotListProps> = ({ scopeToW
                     {/* Official Header */}
                     <div className="text-center border-b-2 border-slate-950 pb-6 mb-6">
                         <div className="font-extrabold text-2xl tracking-wider text-slate-950 uppercase">Nagpur Municipal Corporation</div>
-                        <div className="text-xs font-bold tracking-widest text-slate-500 uppercase mt-1">AuditChain Transparency Portal • Sanitation Watch Receipt</div>
+                        <div className="text-xs font-bold tracking-widest text-slate-500 uppercase mt-1 flex items-center justify-center gap-1.5">
+                            <img src="/trashtrail-logo.jpg" alt="TrashTrail Logo" className="w-4 h-4 rounded-full object-cover shrink-0" />
+                            <span>TrashTrail Transparency Portal • Sanitation Watch Receipt</span>
+                        </div>
                     </div>
 
                     {/* Subheading */}
@@ -385,7 +388,7 @@ export const GarbageHotspotList: React.FC<GarbageHotspotListProps> = ({ scopeToW
                                     On-Chain Verified
                                 </div>
                                 <p className="text-[10px] text-slate-500 leading-normal m-0">
-                                    This complaint log has been registered under the NMC AuditChain Nagpur smart contract audit framework for garbage disposal monitoring.
+                                    This complaint log has been registered under the NMC TrashTrail Nagpur smart contract audit framework for garbage disposal monitoring.
                                 </p>
                             </div>
                             <div className="text-right">

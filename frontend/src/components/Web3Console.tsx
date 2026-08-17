@@ -54,7 +54,7 @@ export const Web3Console: React.FC<Web3ConsoleProps> = ({ logs, onClear }) => {
         <div className="flex items-center gap-2">
           <Terminal size={14} className="text-green-500" />
           <span className="font-mono text-xs font-semibold text-slate-300 uppercase tracking-wider">
-            AuditChain EVM Console
+            TrashTrail EVM Console
           </span>
           <span className="font-mono text-[10px] font-semibold text-green-400 bg-green-500/10 border border-green-500/20 rounded px-1.5 py-0.5 flex items-center gap-1 ml-2">
             <Cpu size={12} className="animate-spin" />

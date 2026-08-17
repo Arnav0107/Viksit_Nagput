@@ -486,7 +486,7 @@ def seed_data(db: Session):
     try:
         from app.auth import DEMO_ACCOUNTS_METADATA
         print("\n" + "=" * 68)
-        print(" [NMC] AuditChain Nagpur - Demo Login Credentials (RBAC Enabled)")
+        print(" [NMC] TrashTrail Nagpur - Demo Login Credentials (RBAC Enabled)")
         print("=" * 68)
         for cred in DEMO_ACCOUNTS_METADATA:
             print(f" [{cred['role'].upper():<7}] Username: {cred['username']:<16} Password: {cred['password']:<12} ({cred['display_name']})")

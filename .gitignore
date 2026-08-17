@@ -2,6 +2,7 @@
 .DS_Store
 Thumbs.db
 Desktop.ini
+scratch/
 
 # Python / Virtual Environment
 __pycache__/
@@ -13,8 +14,6 @@ ENV/
 env/
 auditchain.db
 *.db
-.env
-*.env
 .pytest_cache/
 backend/uploads/*
 !backend/uploads/.gitkeep

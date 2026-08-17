@@ -232,7 +232,7 @@ export const RoadRepairs: React.FC<RoadRepairsProps> = ({ role, token, onAuthErr
           Road SLA Tracker
         </h2>
         <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl text-balance">
-          Contractors are required to restore excavated pipeline roads to a level asphalt grade. AuditChain enforces a 30-day citizen complaint SLA window. If &gt;3 complaints are filed, contract funds are automatically held, and an audit breach is registered on-chain.
+          Contractors are required to restore excavated pipeline roads to a level asphalt grade. TrashTrail enforces a 30-day citizen complaint SLA window. If &gt;3 complaints are filed, contract funds are automatically held, and an audit breach is registered on-chain.
         </p>
       </section>
 

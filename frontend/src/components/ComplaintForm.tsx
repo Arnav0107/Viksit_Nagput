@@ -368,9 +368,9 @@ export const ComplaintForm: React.FC = () => {
                 )}
               </button>
 
-              <div className="flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-400 mt-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
-                AuditChain Nagpur • Public Citizen Engagement
+              <div className="flex items-center justify-center gap-2 text-center text-[11px] text-slate-400 mt-1 font-semibold">
+                <img src="/trashtrail-logo.jpg" alt="TrashTrail Logo" className="w-4 h-4 rounded-full object-cover shrink-0" />
+                TrashTrail Nagpur • Public Citizen Engagement
               </div>
             </form>
           )}

@@ -68,7 +68,7 @@ export const publicTransparencyTranslations: Record<Language, PublicTransparency
     publicAccessChannel: "Public Access Channel — Municipal Compliance Record. All weighbridge tickets shown on this portal are cryptographically locked on-chain and cannot be edited.",
 
     activeForensicInquiry: "Active Forensic Inquiry: IN PROGRESS",
-    inquiryNotice: "The Nagpur Municipal Corporation has ordered a formal inquiry into waste collection invoicing from April–July 2026. AuditChain provides tamper-proof blockchain evidence logs to investigation committees.",
+    inquiryNotice: "The Nagpur Municipal Corporation has ordered a formal inquiry into waste collection invoicing from April–July 2026. TrashTrail provides tamper-proof blockchain evidence logs to investigation committees.",
 
     contractorComplianceLeaderboard: "Contractor Compliance Leaderboard",
     rank: "Rank",
@@ -113,7 +113,7 @@ export const publicTransparencyTranslations: Record<Language, PublicTransparency
       {
         date: "May 20, 2026",
         title: "First GPS Discrepancies Flagged",
-        desc: "AuditChain flags multiple trips where registered truck dump weight has zero corresponding dump site GPS entries."
+        desc: "TrashTrail flags multiple trips where registered truck dump weight has zero corresponding dump site GPS entries."
       },
       {
         date: "June 15, 2026",
@@ -127,7 +127,7 @@ export const publicTransparencyTranslations: Record<Language, PublicTransparency
       },
       {
         date: "August 15, 2026",
-        title: "AuditChain Public Dashboard Released",
+        title: "TrashTrail Public Dashboard Released",
         desc: "Platform opened for public scrutiny to allow citizens to trace locked municipal waste tickets and report road SLA breaches."
       }
     ]
@@ -139,7 +139,7 @@ export const publicTransparencyTranslations: Record<Language, PublicTransparency
     publicAccessChannel: "सार्वजनिक पहुंच चैनल — नगर निगम अनुपालन रिकॉर्ड। इस पोर्टल पर प्रदर्शित सभी वेज-ब्रिज टिकट ब्लॉकचेन पर सुरक्षित (क्रिप्टोग्राफिकली लॉक) हैं और इनमें कोई बदलाव नहीं किया जा सकता।",
 
     activeForensicInquiry: "सक्रिय फोरेंसिक जांच: प्रगति पर है",
-    inquiryNotice: "नागपुर नगर निगम ने अप्रैल-जुलाई 2026 के कचरा संग्रहण चालान (इनवॉइसिंग) की औपचारिक जांच के आदेश दिए हैं। ऑडिटचेन जांच समितियों को छेड़छाड़-मुक्त ब्लॉकचेन साक्ष्य लॉग प्रदान करता है।",
+    inquiryNotice: "नागपुर नगर निगम ने अप्रैल-जुलाई 2026 के कचरा संग्रहण चालान (इनवॉइसिंग) की औपचारिक जांच के आदेश दिए हैं। ट्रैशट्रेल (TrashTrail) जांच समितियों को छेड़छाड़-मुक्त ब्लॉकचेन साक्ष्य लॉग प्रदान करता है।",
 
     contractorComplianceLeaderboard: "ठेकेदार अनुपालन लीडरबोर्ड",
     rank: "रैंक",
@@ -184,7 +184,7 @@ export const publicTransparencyTranslations: Record<Language, PublicTransparency
       {
         date: "20 मई 2026",
         title: "पहली जीपीएस विसंगतियां चिह्नित",
-        desc: "ऑडिटचेन ने कई फेरों को चिह्नित किया जहां पंजीकृत ट्रक डंप वजन की डंप स्थल पर कोई संगत जीपीएस प्रविष्टि नहीं है।"
+        desc: "ट्रैशट्रेल ने कई फेरों को चिह्नित किया जहां पंजीकृत ट्रक डंप वजन की डंप स्थल पर कोई संगत जीपीएस प्रविष्टि नहीं है।"
       },
       {
         date: "15 जून 2026",
@@ -198,7 +198,7 @@ export const publicTransparencyTranslations: Record<Language, PublicTransparency
       },
       {
         date: "15 अगस्त 2026",
-        title: "ऑडिटचेन पब्लिक डैशबोर्ड जारी",
+        title: "ट्रैशट्रेल (TrashTrail) पब्लिक डैशबोर्ड जारी",
         desc: "नागरिकों को लॉक किए गए नगरपालिका अपशिष्ट टिकटों को ट्रैक करने और सड़क एसएलए उल्लंघनों की रिपोर्ट करने के लिए सार्वजनिक मंच खोला गया।"
       }
     ]
@@ -210,7 +210,7 @@ export const publicTransparencyTranslations: Record<Language, PublicTransparency
     publicAccessChannel: "सार्वजनिक प्रवेश चॅनेल — मनपा अनुपालन नोंद. या पोर्टलवर दर्शविलेल्या सर्व वे-ब्रिज पावत्या ब्लॉकचेनवर सुरक्षित (क्रिप्टोग्राफिकली लॉक) असून त्यामध्ये कोणताही बदल केला जाऊ शकत नाही.",
 
     activeForensicInquiry: "सक्रिय फॉरेन्सिक चौकशी: प्रगतीपथावर",
-    inquiryNotice: "नागपूर महानगरपालिकेने एप्रिल-जुलै २०२६ दरम्यानच्या कचरा संकलन इनव्हॉइसिंगच्या औपचारिक चौकशीचे आदेश दिले आहेत. ऑडिटचेन तपास समित्यांना छेडछाड-मुक्त ब्लॉकचेन पुरावे नोंदी पुरवते.",
+    inquiryNotice: "नागपूर महानगरपालिकेने एप्रिल-जुलै २०२६ दरम्यानच्या कचरा संकलन इनव्हॉइसिंगच्या औपचारिक चौकशीचे आदेश दिले आहेत। ट्रॅशट्रेल (TrashTrail) तपास समित्यांना छेडछाड-मुक्त ब्लॉकचेन पुरावे नोंदी पुरवते.",
 
     contractorComplianceLeaderboard: "कंत्राटदार अनुपालन लीडरबोर्ड",
     rank: "क्रमांक",
@@ -255,7 +255,7 @@ export const publicTransparencyTranslations: Record<Language, PublicTransparency
       {
         date: "२० मे २०२६",
         title: "पहिली जीपीएस विसंगती निदर्शनास",
-        desc: "ऑडिटचेनने अशा अनेक फेऱ्या चिन्हांकित केल्या जेथे नोंदणीकृत ट्रक डंप वजनाची डंप साईटवर कोणतीही जीपीएस नोंद नाही."
+        desc: "ट्रॅशट्रेलने अशा अनेक फेऱ्या चिन्हांकित केल्या जेथे नोंदणीकृत ट्रक डंप वजनाची डंप साईटवर कोणतीही जीपीएस नोंद नाही."
       },
       {
         date: "१५ जून २०२६",
@@ -269,7 +269,7 @@ export const publicTransparencyTranslations: Record<Language, PublicTransparency
       },
       {
         date: "१५ ऑगस्ट २०२६",
-        title: "ऑडिटचेन सार्वजनिक डॅशबोर्ड सुरू",
+        title: "ट्रॅशट्रेल (TrashTrail) सार्वजनिक डॅशबोर्ड सुरू",
         desc: "नागरिकांना महापालिकेच्या कचरा पावत्या तपासण्यासाठी आणि रस्ते एसएलए उल्लंघनाची तक्रार करण्यासाठी सार्वजनिक व्यासपीठ खुले केले."
       }
     ]
