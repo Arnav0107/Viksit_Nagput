@@ -36,6 +36,10 @@ export interface PublicTransparencyDictionary {
   queryingLogs: string;
   noSealedRecords: string;
 
+  // Garbage Reports Section
+  garbageReportsSection: string;
+  garbageReportsSubtitle: string;
+
   // Record Item Labels & Notes
   weighTicketPrefix: string;
   roadRestorationPrefix: string;
@@ -82,6 +86,9 @@ export const publicTransparencyTranslations: Record<Language, PublicTransparency
     refresh: "Refresh",
     queryingLogs: "Querying Smart Contract Event Logs...",
     noSealedRecords: "No sealed blockchain exhibits registered yet.",
+
+    garbageReportsSection: "Garbage & Sanitation Reports",
+    garbageReportsSubtitle: "Ranked by report volume and grouped by ward for public review.",
 
     weighTicketPrefix: "Weigh Ticket",
     roadRestorationPrefix: "Road Restoration",
@@ -151,6 +158,9 @@ export const publicTransparencyTranslations: Record<Language, PublicTransparency
     queryingLogs: "स्मार्ट कॉन्ट्रैक्ट इवेंट लॉग खोजे जा रहे हैं...",
     noSealedRecords: "अभी तक कोई सीलबंद ब्लॉकचेन साक्ष्य पंजीकृत नहीं है।",
 
+    garbageReportsSection: "कचरा और स्वच्छता रिपोर्ट",
+    garbageReportsSubtitle: "रिपोर्ट मात्रा के अनुसार क्रमबद्ध और वार्ड के अनुसार समूहित सार्वजनिक दृश्य।",
+
     weighTicketPrefix: "वजन पर्ची",
     roadRestorationPrefix: "सड़क मरम्मत",
     contractorFallback: "ठेकेदार",
@@ -218,6 +228,9 @@ export const publicTransparencyTranslations: Record<Language, PublicTransparency
     refresh: "रिफ्रेश करा",
     queryingLogs: "स्मार्ट कॉन्ट्रॅक्ट इव्हेंट लॉग तपासत आहे...",
     noSealedRecords: "अद्याप कोणतेही सील केलेले ब्लॉकचेन पुरावे नोंदवलेले नाहीत.",
+
+    garbageReportsSection: "कचरा आणि स्वच्छता अहवाल",
+    garbageReportsSubtitle: "अहवालांच्या संख्येनुसार क्रमांकित आणि वार्डनुसार गटबद्ध सार्वजनिक दृश्य.",
 
     weighTicketPrefix: "वजन पावती",
     roadRestorationPrefix: "रस्ता दुरुस्ती",

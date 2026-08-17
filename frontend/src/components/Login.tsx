@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Shield, ShieldAlert, Users, AlertTriangle, KeyRound, Loader2, ExternalLink, Flag } from 'lucide-react';
 
 interface LoginProps {
-  onLogin: (role: string, token: string, username: string, displayName?: string) => void;
+  onLogin: (role: string, token: string, username: string, displayName?: string, ward?: string | null) => void;
   onExplorePublic?: () => void;
   initialError?: string | null;
 }
@@ -68,7 +68,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onExplorePublic, initialE
       sessionStorage.setItem('auditchain_role', data.role);
       sessionStorage.setItem('auditchain_user', data.username);
       sessionStorage.setItem('auditchain_display_name', displayName);
-      onLogin(data.role, data.access_token, data.username, displayName);
+      if (data.ward) {
+        sessionStorage.setItem('auditchain_ward', data.ward);
+      } else {
+        sessionStorage.removeItem('auditchain_ward');
+      }
+      onLogin(data.role, data.access_token, data.username, displayName, data.ward || null);
     } catch (err: any) {
       setError(err.message || 'Unable to connect to authentication server');
     } finally {

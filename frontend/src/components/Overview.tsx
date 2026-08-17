@@ -10,44 +10,45 @@ interface OverviewProps {
   loading: boolean;
   onNavigate: (view: string, targetId?: string) => void;
   premiumVibe?: boolean;
+  garbageSummary?: any;
 }
 
 const SystemStatusDossier = () => (
   <div className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl p-5 shadow-sm text-slate-900 flex flex-col gap-3">
     <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1 m-0">System Status</h4>
     <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-        <span className="text-xs text-slate-500 font-medium">RPC Latency</span>
-        <span className="text-xs font-mono text-emerald-600 font-bold">12ms</span>
-      </div>
-      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-        <span className="text-xs text-slate-500 font-medium">Last Block</span>
-        <span className="text-xs font-mono text-slate-700">#19482719</span>
-      </div>
-      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-        <span className="text-xs text-slate-500 font-medium">Active Tonnage</span>
-        <span className="text-xs font-mono text-slate-700">12,450 MT</span>
-      </div>
-      <div className="flex justify-between items-center">
-        <span className="text-xs text-slate-500 font-medium">SLA Compliance</span>
-        <span className="text-xs font-bold text-slate-700 tabular-nums">94.2%</span>
-      </div>
+      <span className="text-xs text-slate-500 font-medium">RPC Latency</span>
+      <span className="text-xs font-mono text-emerald-600 font-bold">12ms</span>
+    </div>
+    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+      <span className="text-xs text-slate-500 font-medium">Last Block</span>
+      <span className="text-xs font-mono text-slate-700">#19482719</span>
+    </div>
+    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+      <span className="text-xs text-slate-500 font-medium">Active Tonnage</span>
+      <span className="text-xs font-mono text-slate-700">12,450 MT</span>
+    </div>
+    <div className="flex justify-between items-center">
+      <span className="text-xs text-slate-500 font-medium">SLA Compliance</span>
+      <span className="text-xs font-bold text-slate-700 tabular-nums">94.2%</span>
+    </div>
   </div>
 );
 
-export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate, premiumVibe }) => {
+export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate, premiumVibe, garbageSummary }) => {
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
 
   const zonesData = [
-    { name: "Dhantoli",       coords: [21.1299, 79.0798] },
-    { name: "Dharampeth",     coords: [21.1426, 79.0559] },
-    { name: "Hanuman Nagar",  coords: [21.1189, 79.1039] },
-    { name: "Nehru Nagar",    coords: [21.1150, 79.1180] },
-    { name: "Gandhi Baugh",   coords: [21.1550, 79.1050] },
-    { name: "Sataranjipura",  coords: [21.1620, 79.1120] },
-    { name: "Lakadganj",      coords: [21.1520, 79.1320] },
-    { name: "Ashi Nagar",     coords: [21.1780, 79.1200] },
-    { name: "Mangalwari",     coords: [21.1710, 79.0720] },
-    { name: "Laxmi Nagar",    coords: [21.1255, 79.0680] },
+    { name: "Dhantoli", coords: [21.1299, 79.0798] },
+    { name: "Dharampeth", coords: [21.1426, 79.0559] },
+    { name: "Hanuman Nagar", coords: [21.1189, 79.1039] },
+    { name: "Nehru Nagar", coords: [21.1150, 79.1180] },
+    { name: "Gandhi Baugh", coords: [21.1550, 79.1050] },
+    { name: "Sataranjipura", coords: [21.1620, 79.1120] },
+    { name: "Lakadganj", coords: [21.1520, 79.1320] },
+    { name: "Ashi Nagar", coords: [21.1780, 79.1200] },
+    { name: "Mangalwari", coords: [21.1710, 79.0720] },
+    { name: "Laxmi Nagar", coords: [21.1255, 79.0680] },
   ];
 
   if (loading || !data) {
@@ -106,6 +107,13 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate, p
       iconBg: 'bg-rose-50',
       iconColor: 'text-rose-600',
     },
+    ...(garbageSummary ? [{
+      label: 'Open Garbage Hotspots',
+      value: garbageSummary.open_count ?? 0,
+      icon: Info,
+      iconBg: 'bg-emerald-50',
+      iconColor: 'text-emerald-600',
+    }] : []),
   ];
 
   const getContractorGrade = (c: any) => {
@@ -160,7 +168,7 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate, p
       </div>
 
       {/* ── 4 Hero Metric Cards ───────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         {metricCards.map(card => {
           const Icon = card.icon;
           return (
@@ -239,7 +247,7 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate, p
 
             {/* Legend inside map container */}
             <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur border border-slate-200 rounded p-2 text-xs flex flex-col gap-1 z-[1000]">
-              {[['#DC2626','Flagged'],['#D97706','Under Review'],['#059669','Verified']].map(([c,l]) => (
+              {[['#DC2626', 'Flagged'], ['#D97706', 'Under Review'], ['#059669', 'Verified']].map(([c, l]) => (
                 <div key={l} className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c }} />
                   <span className="text-slate-600 font-medium">{l}</span>
@@ -255,11 +263,11 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate, p
 
         {/* Right Column: Scorecards & Zone Detail (4 cols) */}
         <section className="md:col-span-4 flex flex-col gap-6">
-          
+
           {/* Zone Detail Panel */}
           <div className="bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl p-6 shadow-sm text-slate-900 flex flex-col gap-4 hover:-translate-y-[2px] transition-transform duration-300">
             <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2 m-0">ZONE INVESTIGATION</h4>
-            
+
             {selectedZone ? (
               <div className="flex-1 flex flex-col">
                 <div className="flex justify-between items-center mb-4">
@@ -357,16 +365,16 @@ export const Overview: React.FC<OverviewProps> = ({ data, loading, onNavigate, p
             <AreaChart data={monthly_tonnage_history} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="tonnageGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="var(--color-error)" stopOpacity={0.15} />
+                  <stop offset="5%" stopColor="var(--color-error)" stopOpacity={0.15} />
                   <stop offset="95%" stopColor="var(--color-error)" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-outline-variant)" />
               <XAxis dataKey="month" stroke="var(--color-secondary)" tickLine={false} style={{ fontSize: 11, fontFamily: 'var(--font-sans)' }} />
-              <YAxis stroke="var(--color-secondary)" tickLine={false} style={{ fontSize: 11, fontFamily: 'var(--font-sans)' }} tickFormatter={v => `${v/1000}k`} />
+              <YAxis stroke="var(--color-secondary)" tickLine={false} style={{ fontSize: 11, fontFamily: 'var(--font-sans)' }} tickFormatter={v => `${v / 1000}k`} />
               <Tooltip
                 formatter={(value: any, _: any, item: any) => {
-                  const spend = item.payload.spend_inr ? ` (₹${(item.payload.spend_inr/10000000).toFixed(2)} Cr)` : '';
+                  const spend = item.payload.spend_inr ? ` (₹${(item.payload.spend_inr / 10000000).toFixed(2)} Cr)` : '';
                   return [`${Number(value).toLocaleString()} MT${spend}`, 'Billed Tonnage'];
                 }}
                 contentStyle={{ background: 'var(--color-surface-container-lowest)', border: '1px solid var(--color-outline-variant)', borderRadius: 8, fontSize: 12, fontFamily: 'var(--font-sans)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}

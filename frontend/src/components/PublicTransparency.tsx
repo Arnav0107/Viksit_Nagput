@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Scale, ShieldCheck, ShieldAlert, CheckCircle, ExternalLink, RefreshCw, FileText } from 'lucide-react';
 import type { Language } from '../i18n/publicTransparency';
 import { publicTransparencyTranslations } from '../i18n/publicTransparency';
+import { GarbageHotspotList } from './GarbageHotspotList';
 
 interface PublicTransparencyProps {
   data?: any;
@@ -131,33 +132,30 @@ export const PublicTransparency: React.FC<PublicTransparencyProps> = ({ data: in
           <button
             type="button"
             onClick={() => handleLanguageChange('en')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
-              lang === 'en'
+            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${lang === 'en'
                 ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
                 : 'text-slate-600 hover:text-slate-900'
-            }`}
+              }`}
           >
             English
           </button>
           <button
             type="button"
             onClick={() => handleLanguageChange('hi')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
-              lang === 'hi'
+            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${lang === 'hi'
                 ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
                 : 'text-slate-600 hover:text-slate-900'
-            }`}
+              }`}
           >
             हिंदी
           </button>
           <button
             type="button"
             onClick={() => handleLanguageChange('mr')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
-              lang === 'mr'
+            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${lang === 'mr'
                 ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
                 : 'text-slate-600 hover:text-slate-900'
-            }`}
+              }`}
           >
             मराठी
           </button>
@@ -316,6 +314,22 @@ export const PublicTransparency: React.FC<PublicTransparencyProps> = ({ data: in
             ))}
           </div>
         </div>
+      </div>
+
+      {/* ── Garbage Reports ─────────────────────────────────────── */}
+      <div className="mt-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900 m-0">{t.garbageReportsSection}</h2>
+            <p className="text-sm text-slate-500 mt-1">{t.garbageReportsSubtitle}</p>
+          </div>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold uppercase tracking-wide">
+            <span className="material-symbols-outlined text-[16px]">public</span>
+            Live citizen reporting ledger
+          </div>
+        </div>
+
+        <GarbageHotspotList defaultGrouped={true} />
       </div>
     </div>
   );

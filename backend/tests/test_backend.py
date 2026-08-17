@@ -153,6 +153,94 @@ class TestAuditChainBackend(unittest.TestCase):
         self.assertEqual(updated_log.status, "flagged")
         self.assertIn("Gate Verification Mismatch", updated_log.flag_reason)
 
+    def test_garbage_hotspot_clustering_and_dustbin_requests(self):
+        from app.db import GarbageHotspot, GarbageReport, DustbinRequest
+        from app.garbage_ai import resolve_ward_from_coordinates, haversine_meters
+
+        # 1. Ward resolution check (Sataranjipura centroid: 21.1620, 79.1120)
+        ward = resolve_ward_from_coordinates(21.1622, 79.1122)
+        self.assertEqual(ward, "Sataranjipura")
+
+        # 2. Garbage Hotspot and Report creation
+        now = datetime.utcnow()
+        hotspot = GarbageHotspot(
+            id="HOTSPOT-TEST001",
+            ward_name=ward,
+            latitude=21.1622,
+            longitude=79.1122,
+            title="Overflowing bin near Sataranjipura",
+            category="overflowing_bin",
+            report_count=1,
+            status="open",
+            first_reported_at=now,
+            last_reported_at=now
+        )
+        report1 = GarbageReport(
+            id="GRB-TEST001",
+            hotspot=hotspot,
+            photo_url="/uploads/test1.jpg",
+            description="Overflowing dustbin spilling trash on road",
+            latitude=21.1622,
+            longitude=79.1122,
+            ward_name=ward,
+            status="submitted",
+            created_at=now
+        )
+        self.db.add_all([hotspot, report1])
+        self.db.commit()
+
+        # 3. Simulate second duplicate report nearby (20 meters away)
+        distance = haversine_meters(21.1622, 79.1122, 21.1623, 79.1123)
+        self.assertLess(distance, 150.0)
+
+        hotspot.report_count += 1
+        report2 = GarbageReport(
+            id="GRB-TEST002",
+            hotspot=hotspot,
+            photo_url="/uploads/test2.jpg",
+            description="Dustbin full and overflowing again",
+            latitude=21.1623,
+            longitude=79.1123,
+            ward_name=ward,
+            ai_is_duplicate_of_hotspot=True,
+            ai_match_confidence=0.9,
+            ai_reasoning="Same location and overflowing bin issue",
+            status="submitted",
+            created_at=now
+        )
+        self.db.add(report2)
+        self.db.commit()
+
+        # Verify cluster tally
+        saved_hotspot = self.db.query(GarbageHotspot).filter(GarbageHotspot.id == "HOTSPOT-TEST001").first()
+        self.assertEqual(saved_hotspot.report_count, 2)
+        self.assertEqual(len(saved_hotspot.reports), 2)
+
+        # 4. Dustbin Request Tallying
+        dbr = DustbinRequest(
+            id="DBR-TEST001",
+            ward_name=ward,
+            area_description="MG Road near main chowk",
+            reason="Need additional bin for commercial shops",
+            latitude=21.1620,
+            longitude=79.1120,
+            request_count=1,
+            status="pending",
+            created_at=now,
+            updated_at=now
+        )
+        self.db.add(dbr)
+        self.db.commit()
+
+        # Second request nearby increments count
+        dbr.request_count += 1
+        self.db.commit()
+
+        saved_dbr = self.db.query(DustbinRequest).filter(DustbinRequest.id == "DBR-TEST001").first()
+        self.assertEqual(saved_dbr.request_count, 2)
+        self.assertEqual(saved_dbr.status, "pending")
+
 if __name__ == "__main__":
     unittest.main()
+
 

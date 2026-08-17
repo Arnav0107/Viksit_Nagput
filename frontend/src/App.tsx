@@ -4,6 +4,10 @@ import { ContractorDetail } from './components/ContractorDetail';
 import { FlaggedCases } from './components/FlaggedCases';
 import { RoadRepairs } from './components/RoadRepairs';
 import { PublicTransparency } from './components/PublicTransparency';
+import { GarbageReportForm } from './components/GarbageReportForm';
+import { GarbageHotspotList } from './components/GarbageHotspotList';
+import { DustbinRequestForm } from './components/DustbinRequestForm';
+import { DustbinRequestQueue } from './components/DustbinRequestQueue';
 import { Login } from './components/Login';
 import { Web3Console } from './components/Web3Console';
 
@@ -20,6 +24,10 @@ const PAGE_TITLES: Record<string, string> = {
   flags: 'Evidence Exhibits',
   repairs: 'Road SLA Tracker',
   transparency: 'Public Ledger',
+  garbage: 'Garbage Reports',
+  dustbins: 'Dustbin Requests',
+  'garbage-form': 'Report Garbage',
+  'dustbin-form': 'Request Dustbins',
 };
 
 function App() {
@@ -27,6 +35,7 @@ function App() {
   const [role, setRole] = useState<string | null>(() => sessionStorage.getItem('auditchain_role'));
   const [username, setUsername] = useState<string | null>(() => sessionStorage.getItem('auditchain_user'));
   const [displayName, setDisplayName] = useState<string | null>(() => sessionStorage.getItem('auditchain_display_name'));
+  const [ward, setWard] = useState<string | null>(() => sessionStorage.getItem('auditchain_ward'));
   const [authError, setAuthError] = useState<string | null>(null);
   const [inlineNotice, setInlineNotice] = useState<string | null>(null);
 
@@ -34,6 +43,7 @@ function App() {
   const [selectedFlagCaseId, setSelectedFlagCaseId] = useState<string | null>(null);
   const [overviewData, setOverviewData] = useState<any>(null);
   const [contractors, setContractors] = useState<any[]>([]);
+  const [garbageSummary, setGarbageSummary] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [theme] = useState<'light' | 'dark'>('light');
   const [consoleLogs, setConsoleLogs] = useState<ConsoleLog[]>([]);
@@ -60,6 +70,16 @@ function App() {
       const contractorsRes = await fetch('/api/contractors');
       const cData = await contractorsRes.json();
       setContractors(cData);
+      if (token && role !== 'public') {
+        const garbageSummaryRes = await fetch('/api/garbage-hotspots/summary', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (garbageSummaryRes.ok) {
+          setGarbageSummary(await garbageSummaryRes.json());
+        }
+      } else {
+        setGarbageSummary(null);
+      }
     } catch (err) {
       console.error("Error loading API stats", err);
     } finally {
@@ -67,18 +87,19 @@ function App() {
     }
   };
 
-  useEffect(() => { fetchDossierData(); }, []);
+  useEffect(() => { fetchDossierData(); }, [token, role]);
 
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('dark');
   }, [theme]);
 
-  const handleLogin = (selectedRole: string, authToken: string, authUser: string, authDisplayName?: string) => {
+  const handleLogin = (selectedRole: string, authToken: string, authUser: string, authDisplayName?: string, authWard?: string | null) => {
     setRole(selectedRole);
     setToken(authToken);
     setUsername(authUser);
     setDisplayName(authDisplayName || authUser);
+    setWard(authWard || null);
     setAuthError(null);
     setInlineNotice(null);
     pushWeb3Log("Authorization", `Logged in: [${selectedRole.toUpperCase()}] (${authDisplayName || authUser}) JWT issued.`, "success");
@@ -90,6 +111,7 @@ function App() {
     setToken(null);
     setUsername('citizen_public');
     setDisplayName('Public Citizen');
+    setWard(null);
     setAuthError(null);
     setInlineNotice(null);
     setCurrentView('transparency');
@@ -101,7 +123,9 @@ function App() {
     sessionStorage.removeItem('auditchain_role');
     sessionStorage.removeItem('auditchain_user');
     sessionStorage.removeItem('auditchain_display_name');
+    sessionStorage.removeItem('auditchain_ward');
     setRole(null); setToken(null); setUsername(null); setDisplayName(null); setInlineNotice(null);
+    setWard(null);
     if (logoutMessage) {
       setAuthError(logoutMessage);
       pushWeb3Log("Auth Security", `Session terminated: ${logoutMessage}`, "warn");
@@ -162,24 +186,28 @@ function App() {
   /* ── Nav Items ─────────────────────────────────────────────────── */
   const navItems = [
     ...(role !== 'public' ? [
-      { view: 'overview',     icon: 'dashboard',   label: 'Dashboard' },
-      { view: 'contractors',  icon: 'domain',      label: 'Contractor Audit' },
-      { view: 'flags',        icon: 'gavel',       label: 'Evidence Exhibits',
-        badge: overviewData?.summary?.flagged_weighs > 0 ? overviewData.summary.flagged_weighs : undefined },
+      { view: 'overview', icon: 'dashboard', label: 'Dashboard' },
+      { view: 'contractors', icon: 'domain', label: 'Contractor Audit' },
+      {
+        view: 'flags', icon: 'gavel', label: 'Evidence Exhibits',
+        badge: overviewData?.summary?.flagged_weighs > 0 ? overviewData.summary.flagged_weighs : undefined
+      },
+      { view: 'garbage', icon: 'delete', label: 'Garbage Reports' },
+      { view: 'dustbins', icon: 'delete_sweep', label: 'Dustbin Requests' },
     ] : []),
-    { view: 'repairs',      icon: 'construction', label: 'Road SLA Tracker' },
-    { view: 'transparency', icon: 'description',  label: 'Public Ledger' },
+    { view: 'repairs', icon: 'construction', label: 'Road SLA Tracker' },
+    { view: 'transparency', icon: 'description', label: 'Public Ledger' },
   ];
 
   const roleColors: Record<string, string> = {
     auditor: '#DC2626',
     officer: '#D97706',
-    public:  '#059669',
+    public: '#059669',
   };
 
   return (
     <div className="flex flex-col h-screen w-full text-slate-900 overflow-hidden font-sans bg-[url('https://img.magnific.com/premium-photo/high-angle-view-modern-buildings-city-against-clear-sky_1623070-169.jpg?semt=ais_test_b&w=740&q=80')] bg-cover bg-center bg-no-repeat bg-fixed relative">
-      
+
       {/* Gradient overlay so the image fades to solid white/slate at the bottom for readability */}
       <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-b from-white/60 via-slate-50/90 to-slate-50"></div>
 
@@ -188,7 +216,7 @@ function App() {
         <div className="flex justify-between items-center h-full px-4 md:px-8 mx-auto">
           {/* Mobile Menu Toggle & Brand */}
           <div className="flex items-center gap-3">
-            <button 
+            <button
               className="md:hidden p-2 rounded hover:bg-slate-100 transition-colors text-primary cursor-pointer"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
@@ -228,7 +256,7 @@ function App() {
 
       {/* ── Main Layout Body ───────────────────────────────────── */}
       <div className="flex flex-1 w-full overflow-hidden relative">
-        
+
         {/* Mobile Sidebar Overlay */}
         {isMobileMenuOpen && (
           <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsMobileMenuOpen(false)} />
@@ -236,11 +264,11 @@ function App() {
 
         {/* Sidebar */}
         <aside className={`${isMobileMenuOpen ? 'fixed inset-y-0 left-0 z-50 flex shadow-2xl' : 'hidden'} md:flex flex-col w-64 shrink-0 p-4 transition-transform overflow-y-auto relative ${premiumVibe ? 'bg-slate-950 text-slate-200 border-r border-slate-800' : 'bg-white text-slate-900 border-r border-slate-200'}`}>
-          
+
           {/* --- TRADITIONAL NAGPUR WATERMARK --- */}
-          <div 
+          <div
             className="absolute inset-x-0 bottom-0 h-[80%] pointer-events-none z-0 opacity-40 bg-bottom bg-no-repeat bg-contain"
-            style={{ 
+            style={{
               backgroundImage: "url('/deekshabhoomi.svg')",
               WebkitMaskImage: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)",
               maskImage: "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)"
@@ -289,10 +317,18 @@ function App() {
                   <p className={`text-[10px] truncate m-0 ${premiumVibe ? 'text-slate-500' : 'text-slate-500'}`}>{role ? `${role.charAt(0).toUpperCase()}${role.slice(1)} Session` : 'Read-Only Access'}</p>
                 </div>
               </div>
-              <button onClick={() => navigateToView('repairs')} className="w-full bg-orange-500 text-white font-bold tracking-wide uppercase text-sm py-3 rounded-lg hover:-translate-y-[2px] transition-transform shadow-sm flex justify-center items-center gap-2 cursor-pointer">
-                <span className="material-symbols-outlined text-[20px]">add_circle</span>
-                <span>Report Issue</span>
-              </button>
+              {role === 'public' && (
+                <>
+                  <button onClick={() => navigateToView('garbage-form')} className="w-full bg-emerald-600 text-white font-bold tracking-wide uppercase text-sm py-3 rounded-lg hover:-translate-y-[2px] transition-transform shadow-sm flex justify-center items-center gap-2 cursor-pointer">
+                    <span className="material-symbols-outlined text-[20px]">eco</span>
+                    <span>Report Garbage</span>
+                  </button>
+                  <button onClick={() => navigateToView('dustbin-form')} className="w-full bg-amber-600 text-white font-bold tracking-wide uppercase text-sm py-3 rounded-lg hover:-translate-y-[2px] transition-transform shadow-sm flex justify-center items-center gap-2 cursor-pointer">
+                    <span className="material-symbols-outlined text-[20px]">delete_sweep</span>
+                    <span>Request Dustbins</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </aside>
@@ -301,7 +337,7 @@ function App() {
         <main className="relative z-10 flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto space-y-6 w-full">
             {currentView === 'overview' && (
-              <Overview data={overviewData} loading={loading} onNavigate={navigateToView} premiumVibe={premiumVibe} />
+              <Overview data={overviewData} loading={loading} onNavigate={navigateToView} premiumVibe={premiumVibe} garbageSummary={garbageSummary} />
             )}
             {currentView === 'contractors' && (
               <ContractorDetail contractors={contractors} onNavigate={navigateToView} />
@@ -325,6 +361,18 @@ function App() {
             )}
             {currentView === 'transparency' && (
               <PublicTransparency data={overviewData} />
+            )}
+            {currentView === 'garbage' && (
+              <GarbageHotspotList scopeToWard={role === 'officer' ? ward || undefined : undefined} showActions={role !== 'public'} token={token} defaultGrouped={role === 'officer'} />
+            )}
+            {currentView === 'dustbins' && (
+              <DustbinRequestQueue scopeToWard={role === 'officer' ? ward || undefined : undefined} token={token} />
+            )}
+            {currentView === 'garbage-form' && (
+              <GarbageReportForm />
+            )}
+            {currentView === 'dustbin-form' && (
+              <DustbinRequestForm />
             )}
           </div>
         </main>
